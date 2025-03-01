@@ -12,6 +12,7 @@ func run(args []string) error {
 	app.Name = "vesper"
 
 	cmd.Install(app)
+
 	return app.Run(args)
 }
 
