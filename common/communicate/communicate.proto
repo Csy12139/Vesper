@@ -1,0 +1,49 @@
+syntax = "proto3";
+package communicate;
+option go_package = "./communicate";
+
+// request
+message CreateBucket {
+  bool isEncrypted = 1;
+  int64 bucketId = 2;
+  int64 replicaNum = 3;
+}
+
+message UploadData{
+  int64 fileID = 1;
+  string fileName = 2;
+  int64 fileSize = 3; //MB
+}
+
+message DownloadData{
+  int64 fileID = 1;
+}
+
+message HeartbeatDetection{
+  bool isRecover = 1;
+
+}
+// response
+message BoolResponse {
+  bool success = 1;
+}
+
+message DNReplicaID{
+  bool success = 1;
+  repeated string dnReplicaID = 2;
+  bool isEncrypted = 3;
+}
+
+message HeartbeatMonitor{
+  bool success = 1;
+  bool isRecover = 2;
+  bool isReport = 3;
+}
+
+
+service MN {
+  rpc CreateBucketRequest (CreateBucket) returns (BoolResponse) {}
+  rpc UploadRequest (UploadData) returns (DNReplicaID) {}
+  rpc DownloadRequest (DownloadData) returns (DNReplicaID) {}
+  rpc HeartDetectRequest (HeartbeatDetection) returns (HeartbeatMonitor) {}
+}
