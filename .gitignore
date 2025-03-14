@@ -1,0 +1,6 @@
+/MN/mn
+/SDK/sdk
+/SDK/logs/
+/MN/logs/
+/grpcutil/proto/grpcutil.pb.go
+/grpcutil/proto/grpcutil_grpc.pb.go
