@@ -56,4 +56,5 @@ func main() {
 		log.Fatalf("log init failed: %v", err)
 	}
 	initServer(":50051")
+
 }
