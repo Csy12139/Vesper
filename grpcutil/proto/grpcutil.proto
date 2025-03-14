@@ -38,6 +38,7 @@ message HeartbeatMonitor{
   bool success = 1;
   bool isRecover = 2;
   bool isReport = 3;
+  bool isReceiverData = 4;
 }
 
 

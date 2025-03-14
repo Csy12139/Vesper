@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	pb "github.com/Csy12139/Vesper/common/communicate"
+	pb "github.com/Csy12139/Vesper/grpcutil/proto"
 	"github.com/Csy12139/Vesper/log"
 	"google.golang.org/grpc"
 	"net"

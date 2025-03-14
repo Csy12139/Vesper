@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	pb "github.com/Csy12139/Vesper/common/communicate"
+	"github.com/Csy12139/Vesper/grpcutil"
+	pb "github.com/Csy12139/Vesper/grpcutil/proto"
 	"github.com/Csy12139/Vesper/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"time"
 )
 
 func setupClient(addr string) (*grpc.ClientConn, pb.MNClient) {
@@ -21,31 +21,12 @@ func setupClient(addr string) (*grpc.ClientConn, pb.MNClient) {
 	return conn, c
 }
 
-type RequestFunc func(context.Context, pb.MNClient) (interface{}, error)
-
-func Request(c pb.MNClient, requestFunc RequestFunc) interface{} {
-	const maxAttempts = 3
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancel()
-
-		resp, err := requestFunc(ctx, c)
-		if err == nil {
-			return resp
-		}
-		log.Infof("Attempt %d failed: %v", attempt, err)
-		if attempt < maxAttempts {
-			time.Sleep(time.Second * time.Duration(attempt))
-		}
-	}
-	log.Fatalf("Failed after %d attempts", maxAttempts)
-	return nil
-}
 func createBucket(c pb.MNClient, bucketID int64) {
 	createBucketFunc := func(ctx context.Context, client pb.MNClient) (interface{}, error) {
 		return client.CreateBucketRequest(ctx, &pb.CreateBucket{BucketId: bucketID})
 	}
-	resp := Request(c, createBucketFunc)
+	resp := grpcutil.Request(c, createBucketFunc)
+
 	if createResp, ok := resp.(*pb.BoolResponse); ok {
 		log.Info("Response: %s", createResp.Success)
 	} else {
