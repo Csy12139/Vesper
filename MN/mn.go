@@ -24,7 +24,7 @@ func (s *server) DownloadRequest(ctx context.Context, req *pb.DownloadData) (*pb
 	return &pb.DNReplicaID{}, nil
 }
 func (s *server) HeartDetectRequest(ctx context.Context, req *pb.HeartbeatDetection) (*pb.HeartbeatMonitor, error) {
-	return &pb.HeartbeatMonitor{}, nil
+	return &pb.HeartbeatMonitor{Success: true}, nil
 }
 
 func setupListener(addr string) net.Listener {
