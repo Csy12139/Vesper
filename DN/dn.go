@@ -1,33 +1,40 @@
 package main
 
 import (
-	"github.com/Csy12139/Vesper/common"
-	"github.com/Csy12139/Vesper/log"
 	"os"
 	"time"
+
+	"github.com/Csy12139/Vesper/common"
+	"github.com/Csy12139/Vesper/log"
 )
 
 // runMainLoop handles the main DN logic - sending heartbeats and processing commands
-func runMainLoop(mnClient *common.MNClient) {
+func runMainLoop() {
+	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
+	if err != nil {
+		log.Fatalf("Failed to create MN client: %v", err)
+	}
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			// Send heartbeat
-			resp, err := mnClient.DoHeartbeat(GlobalConfig.UUID)
-			if err != nil {
-				log.Errorf("Heartbeat failed: %v", err)
-				continue
-			}
+	cmdHandler := NewCommandHandler()
 
-			// Process commands from heartbeat response
-			for _, cmd := range resp.Commands {
-				log.Infof("Received command: type=%v, chunkID=%v, targetUUID=%v", 
-					cmd.CommandType, cmd.ChunkID, cmd.TargetUUID)
-				// TODO: Implement command execution
-			}
+	for range ticker.C {
+		// Get command results before sending heartbeat
+		results := cmdHandler.GetResults()
+
+		// Send heartbeat with results
+		resp, err := mnClient.DoHeartbeat(GlobalConfig.UUID, results)
+		if err != nil {
+			log.Errorf("Heartbeat failed: %v", err)
+			continue
+		}
+
+		// Process commands from heartbeat response
+		for _, cmd := range resp.Commands {
+			log.Infof("Received command: type=%v", cmd.Type)
+			cmdHandler.HandleCommand(cmd)
 		}
 	}
 }
@@ -46,10 +53,5 @@ func main() {
 		log.Fatalf("Failed to initialize log: %v", err)
 	}
 
-	// Create MN client
-	mnClient := common.NewMNClient(GlobalConfig.MNAddr)
-	defer mnClient.Close()
-
-	// Start main loop
-	runMainLoop(mnClient)
+	runMainLoop()
 }

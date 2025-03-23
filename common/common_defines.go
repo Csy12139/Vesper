@@ -10,19 +10,44 @@ const (
 	CommandType_DELETE_CHUNK CommandType = 3
 )
 
-// ChunkCommand represents a command to operate on a chunk
-type ChunkCommand struct {
-	CommandType CommandType
-	ChunkID     uint64
-	TargetUUID  string
+// CommandResult represents the result of executing a command
+type CommandResult struct {
+	CommandID    uint64
+	Success      bool
+	ErrorMessage string
+}
+
+// ReadChunkCmd represents a command to read a chunk
+type ReadChunkCmd struct {
+	TargetUUID string
+}
+
+// WriteChunkCmd represents a command to write a chunk
+type WriteChunkCmd struct {
+	TargetUUID string
+}
+
+// DeleteChunkCmd represents a command to delete a chunk
+type DeleteChunkCmd struct {
+	ChunkID uint64
+}
+
+// Command represents a command from MN to DN
+type Command struct {
+	ID            uint64
+	Type          CommandType
+	ReadChunkCmd  *ReadChunkCmd
+	WriteChunkCmd *WriteChunkCmd
+	DeleteChunkCmd *DeleteChunkCmd
 }
 
 // HeartbeatRequest represents a heartbeat request from DN to MN
 type HeartbeatRequest struct {
-	UUID string
+	UUID           string
+	CommandResults []CommandResult
 }
 
 // HeartbeatResponse represents MN's response to a heartbeat
 type HeartbeatResponse struct {
-	Commands []ChunkCommand
+	Commands []Command
 }
