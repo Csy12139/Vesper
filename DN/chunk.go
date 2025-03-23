@@ -18,10 +18,22 @@ func AddChunk(chunk *common.Chunk) error {
 	// Create chunk file path using configured data directory
 	chunkPath := filepath.Join(GlobalConfig.DataPath, fmt.Sprintf("%d", chunk.ID))
 
-	// Create and write to file
-	err := os.WriteFile(chunkPath, chunk.Data, 0644)
+	// Create file with O_EXCL flag to ensure atomic creation
+	file, err := os.OpenFile(chunkPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to write chunk file: %w", err)
+		if os.IsExist(err) {
+			return fmt.Errorf("chunk %d already exists", chunk.ID)
+		}
+		return fmt.Errorf("failed to create chunk file: %w", err)
+	}
+	defer file.Close()
+
+	// Write data to file
+	_, err = file.Write(chunk.Data)
+	if err != nil {
+		// Try to cleanup the file if write fails
+		os.Remove(chunkPath)
+		return fmt.Errorf("failed to write chunk data: %w", err)
 	}
 
 	return nil

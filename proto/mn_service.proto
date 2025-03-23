@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/Csy12139/Vesper/proto";
+
+service MNService {
+  rpc DoHeartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+}
+
+message HeartbeatRequest {
+  string uuid = 1;
+  repeated CommandResult command_results = 2;
+}
+
+enum CommandType {
+  NO_OP = 0;
+  READ_CHUNK = 1;
+  WRITE_CHUNK = 2;
+  DELETE_CHUNK = 3;
+}
+
+message SdpAndCandidates {
+  string sdp = 1;
+  repeated string candidates = 2;
+}
+
+message ReadChunkCmd {
+  string target_uuid = 1;
+}
+
+message WriteChunkCmd {
+  string target_uuid = 1;
+}
+
+message DeleteChunkCmd {
+  uint64 chunk_id = 1;
+}
+
+message Command {
+  uint64 id = 1;        // Unique command ID
+  CommandType type = 2;  // Required
+  oneof command {        // Optional based on type
+    ReadChunkCmd read_chunk_cmd = 3;
+    WriteChunkCmd write_chunk_cmd = 4;
+    DeleteChunkCmd delete_chunk_cmd = 5;
+  }
+}
+
+message CommandResult {
+  uint64 command_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message HeartbeatResponse {
+  repeated Command commands = 1;
+}
