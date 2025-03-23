@@ -30,15 +30,15 @@ func heartDetect(c pb.MNClient, isRecover bool) {
 }
 
 func main() {
-	loadConfig(os.Args[1])
-	err := log.InitLog("./logs", 10, 5, "info")
-	if err != nil {
-		log.Fatalf("log init failed: %v", err)
+	if len(os.Args) < 2 {
+		log.Fatalf("Usage: %s <config_file>", os.Args[0])
 	}
-	conn, c := grpcutil.SetupClient("localhost:50051")
-	defer conn.Close()
+	config, err := loadConfig(os.Args[1])
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 
-	heartDetect(c, false)
-
-	select {}
+	if err := log.InitLog(config.LogPath, config.MaxSize, config.MaxBackups, config.LogLevel); err != nil {
+		log.Fatalf("Failed to initialize log: %v", err)
+	}
 }

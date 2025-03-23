@@ -17,6 +17,8 @@ type LogConfig struct {
 type Config struct {
 	UUID string    `json:"uuid"`
 	Log  LogConfig `json:"log"`
+	DataPath string `json:"data_path"`
+	MNAddr   string `json:"mn_addr"`
 }
 
 var GlobalConfig Config
