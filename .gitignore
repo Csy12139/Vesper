@@ -2,7 +2,6 @@
 /SDK/sdk
 /SDK/logs/
 /MN/logs/
-/grpcutil/proto/grpcutil.pb.go
-/grpcutil/proto/grpcutil_grpc.pb.go
 /DN/dn
 /DN/logs/
+/proto/*.go
