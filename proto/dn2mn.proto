@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/Csy12139/Vesper/proto";
+
+service DN2MN {
+  rpc DoHeartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+}
+
+message HeartbeatRequest {
+  string uuid = 1;
+}
+
+enum CommandType {
+  NO_OP = 0;
+  READ_CHUNK = 1;
+  WRITE_CHUNK = 2;
+  DELETE_CHUNK = 3;
+}
+
+message ChunkCommand {
+  CommandType command_type = 1;
+  uint64 chunk_id = 2;
+  string target_uuid = 3;
+}
+
+message HeartbeatResponse {
+  repeated ChunkCommand commands = 1;
+}

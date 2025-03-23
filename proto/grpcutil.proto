@@ -1,6 +1,7 @@
 syntax = "proto3";
-package communicate;
-option go_package = "./communicate";
+package proto;
+
+option go_package = "github.com/Csy12139/Vesper/proto";
 
 // request
 message CreateBucket {
