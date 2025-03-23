@@ -1,44 +1,55 @@
 package main
 
 import (
-	"context"
-	"github.com/Csy12139/Vesper/grpcutil"
-	pb "github.com/Csy12139/Vesper/grpcutil/proto"
+	"github.com/Csy12139/Vesper/common"
 	"github.com/Csy12139/Vesper/log"
 	"os"
 	"time"
 )
 
-func heartDetect(c pb.MNClient, isRecover bool) {
-	ticker := time.NewTicker(5 * time.Second)
-	//defer ticker.Stop()
+// runMainLoop handles the main DN logic - sending heartbeats and processing commands
+func runMainLoop(mnClient *common.MNClient) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
-	go func() {
-		for range ticker.C {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			defer cancel()
-
-			resp, err := c.HeartDetectRequest(ctx, &pb.HeartbeatDetection{IsRecover: isRecover})
+	for {
+		select {
+		case <-ticker.C:
+			// Send heartbeat
+			resp, err := mnClient.DoHeartbeat(GlobalConfig.UUID)
 			if err != nil {
-				log.Infof("Heartbeat failed: %v", err)
+				log.Errorf("Heartbeat failed: %v", err)
 				continue
 			}
-			log.Infof("Heartbeat Response: success=%v, isRecover=%v, isReport=%v, isReceiverData=%v",
-				resp.Success, resp.IsRecover, resp.IsReport, resp.IsReceiverData)
+
+			// Process commands from heartbeat response
+			for _, cmd := range resp.Commands {
+				log.Infof("Received command: type=%v, chunkID=%v, targetUUID=%v", 
+					cmd.CommandType, cmd.ChunkID, cmd.TargetUUID)
+				// TODO: Implement command execution
+			}
 		}
-	}()
+	}
 }
 
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatalf("Usage: %s <config_file>", os.Args[0])
 	}
-	config, err := loadConfig(os.Args[1])
+
+	err := loadConfig(os.Args[1])
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	if err := log.InitLog(config.LogPath, config.MaxSize, config.MaxBackups, config.LogLevel); err != nil {
+	if err := log.InitLog(GlobalConfig.Log.LogDir, GlobalConfig.Log.MaxFileSizeMb, GlobalConfig.Log.MaxFileNum, GlobalConfig.Log.LogLevel); err != nil {
 		log.Fatalf("Failed to initialize log: %v", err)
 	}
+
+	// Create MN client
+	mnClient := common.NewMNClient(GlobalConfig.MNAddr)
+	defer mnClient.Close()
+
+	// Start main loop
+	runMainLoop(mnClient)
 }
