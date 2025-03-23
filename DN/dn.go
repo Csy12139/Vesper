@@ -5,6 +5,7 @@ import (
 	"github.com/Csy12139/Vesper/grpcutil"
 	pb "github.com/Csy12139/Vesper/grpcutil/proto"
 	"github.com/Csy12139/Vesper/log"
+	"os"
 	"time"
 )
 
@@ -29,6 +30,7 @@ func heartDetect(c pb.MNClient, isRecover bool) {
 }
 
 func main() {
+	loadConfig(os.Args[1])
 	err := log.InitLog("./logs", 10, 5, "info")
 	if err != nil {
 		log.Fatalf("log init failed: %v", err)

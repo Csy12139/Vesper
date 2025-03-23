@@ -1,0 +1,9 @@
+{
+  "uuid": "wtpsk1m32",
+  "log": {
+    "logDir": "./log",
+    "maxFileSizeMb": 100,
+    "maxFileNum": 10,
+    "logLevel": "INFO"
+  }
+}
