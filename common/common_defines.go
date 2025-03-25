@@ -34,10 +34,10 @@ type DeleteChunkCmd struct {
 
 // Command represents a command from MN to DN
 type Command struct {
-	ID            uint64
-	Type          CommandType
-	ReadChunkCmd  *ReadChunkCmd
-	WriteChunkCmd *WriteChunkCmd
+	ID             uint64
+	Type           CommandType
+	ReadChunkCmd   *ReadChunkCmd
+	WriteChunkCmd  *WriteChunkCmd
 	DeleteChunkCmd *DeleteChunkCmd
 }
 
@@ -50,4 +50,28 @@ type HeartbeatRequest struct {
 // HeartbeatResponse represents MN's response to a heartbeat
 type HeartbeatResponse struct {
 	Commands []Command
+}
+
+type PutSDPCandidatesRequest struct {
+	SourceUUID string
+	TargetUUID string
+	SDP        string
+	Candidates []string
+}
+
+type PutSDPCandidatesResponse struct {
+	Success      bool
+	ErrorMessage string
+}
+
+type GetSDPCandidatesRequest struct {
+	SourceUUID string
+	TargetUUID string
+}
+
+type GetSDPCandidatesResponse struct {
+	SourceUUID string
+	TargetUUID string
+	SDP        string
+	Candidates []string
 }

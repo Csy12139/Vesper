@@ -5,3 +5,4 @@
 /DN/dn
 /DN/logs/
 /proto/*.go
+/build/*

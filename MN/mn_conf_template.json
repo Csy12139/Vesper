@@ -1,0 +1,10 @@
+{
+  "log": {
+    "logDir": "./log",
+    "maxFileSizeMb": 100,
+    "maxFileNum": 10,
+    "logLevel": "INFO"
+  },
+  "mn_network": "tcp",
+  "mn_addr": ":50051"
+}

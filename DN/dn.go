@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -39,19 +40,55 @@ func runMainLoop() {
 	}
 }
 
+func test_put() {
+	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
+	if err != nil {
+		log.Fatalf("Failed to create MN client: %v", err)
+	}
+	req := common.PutSDPCandidatesRequest{
+		SourceUUID: "1",
+		TargetUUID: "2",
+		SDP:        "abc",
+		Candidates: nil,
+	}
+	resp, err := mnClient.PutSDPCandidates(&req)
+	if err != nil {
+		log.Errorf("PutSDPCandidates failed: %v", err)
+	}
+	fmt.Println(resp)
+}
+
+func test_get() {
+	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
+	if err != nil {
+		log.Fatalf("Failed to create MN client: %v", err)
+	}
+	req := common.GetSDPCandidatesRequest{
+		SourceUUID: "1",
+		TargetUUID: "2",
+	}
+	resp, err := mnClient.GetSDPCandidates(&req)
+	if err != nil {
+		log.Errorf("GetSDPCandidates failed: %v", err)
+	}
+	fmt.Println(resp)
+}
+
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %s <config_file>", os.Args[0])
+		fmt.Printf("Usage: %s <config_file>", os.Args[0])
 	}
 
 	err := loadConfig(os.Args[1])
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		fmt.Printf("Failed to load config: %v", err)
 	}
 
 	if err := log.InitLog(GlobalConfig.Log.LogDir, GlobalConfig.Log.MaxFileSizeMb, GlobalConfig.Log.MaxFileNum, GlobalConfig.Log.LogLevel); err != nil {
 		log.Fatalf("Failed to initialize log: %v", err)
 	}
 
-	runMainLoop()
+	//runMainLoop()
+	test_put()
+	test_get()
 }

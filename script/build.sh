@@ -15,9 +15,11 @@ protoc --go_out=. --go_opt=paths=source_relative \
 # Build DN binary
 echo "Building DN..."
 go build -o build/dn ./DN
+cp ./DN/dn_conf_template.json ./build
 
 # Build MN binary 
 echo "Building MN..."
 go build -o build/mn ./MN
+cp ./MN/mn_conf_template.json ./build
 
 echo "Build complete! Binaries are in the build directory"

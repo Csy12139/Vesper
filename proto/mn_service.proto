@@ -6,6 +6,32 @@ option go_package = "github.com/Csy12139/Vesper/proto";
 
 service MNService {
   rpc DoHeartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+  rpc PutSDPCandidates(PutSDPCandidatesRequest) returns (PutSDPCandidatesResponse) {}
+  rpc GetSDPCandidates(GetSDPCandidatesRequest) returns (GetSDPCandidatesResponse) {}
+}
+
+message PutSDPCandidatesRequest{
+  string source_uuid = 1;
+  string target_uuid = 2;
+  string sdp = 3;
+  repeated string candidates = 4;
+}
+
+message PutSDPCandidatesResponse{
+  bool success = 1;
+  string error_message = 2;
+}
+
+message GetSDPCandidatesRequest{
+  string source_uuid = 1;
+  string target_uuid = 2;
+}
+
+message GetSDPCandidatesResponse{
+  string source_uuid = 1;
+  string target_uuid = 2;
+  string sdp = 3;
+  repeated string candidates = 4;
 }
 
 message HeartbeatRequest {

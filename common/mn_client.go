@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	pb "github.com/Csy12139/Vesper/proto"
@@ -15,7 +14,6 @@ const mnClientTimeout = 5 * time.Second
 
 type MNClient struct {
 	addr   string
-	mu     sync.Mutex
 	client pb.MNServiceClient
 }
 
@@ -43,12 +41,32 @@ func (c *MNClient) DoHeartbeat(uuid string, results []CommandResult) (*Heartbeat
 	pbReq := HeartbeatRequest2Proto(req)
 	pbResp, err := c.client.DoHeartbeat(ctx, pbReq)
 	if err != nil {
-		// 重置客户端连接以触发下次重连
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		c.client = nil
 		return nil, fmt.Errorf("heartbeat RPC failed: %w", err)
 	}
 
 	return Proto2HeartbeatResponse(pbResp), nil
+}
+
+func (c *MNClient) PutSDPCandidates(req *PutSDPCandidatesRequest) (*PutSDPCandidatesResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
+	defer cancel()
+
+	pbReq := PutSDPCandidatesRequest2Proto(req)
+	pbResp, err := c.client.PutSDPCandidates(ctx, pbReq)
+	if err != nil {
+		return nil, fmt.Errorf("put sdp and candidates RPC failed: %w", err)
+	}
+	return Proto2PutSDPCandidatesResponse(pbResp), nil
+}
+
+func (c *MNClient) GetSDPCandidates(req *GetSDPCandidatesRequest) (*GetSDPCandidatesResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
+	defer cancel()
+
+	pbReq := GetSDPCandidatesRequest2Proto(req)
+	pbResp, err := c.client.GetSDPCandidates(ctx, pbReq)
+	if err != nil {
+		return nil, fmt.Errorf("get sdp and candidates RPC failed: %w", err)
+	}
+	return Proto2GetSDPCandidatesResponse(pbResp), nil
 }

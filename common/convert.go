@@ -113,3 +113,65 @@ func HeartbeatResponse2Proto(resp *HeartbeatResponse) *pb.HeartbeatResponse {
 		Commands: pbCommands,
 	}
 }
+
+func Proto2PutSDPCandidatesRequest(pbReq *pb.PutSDPCandidatesRequest) *PutSDPCandidatesRequest {
+	return &PutSDPCandidatesRequest{
+		SourceUUID: pbReq.SourceUuid,
+		TargetUUID: pbReq.TargetUuid,
+		SDP:        pbReq.Sdp,
+		Candidates: pbReq.Candidates,
+	}
+}
+
+func PutSDPCandidatesRequest2Proto(req *PutSDPCandidatesRequest) *pb.PutSDPCandidatesRequest {
+	return &pb.PutSDPCandidatesRequest{
+		SourceUuid: req.SourceUUID,
+		TargetUuid: req.TargetUUID,
+		Sdp:        req.SDP,
+		Candidates: req.Candidates,
+	}
+}
+
+func Proto2PutSDPCandidatesResponse(pbResp *pb.PutSDPCandidatesResponse) *PutSDPCandidatesResponse {
+	return &PutSDPCandidatesResponse{
+		Success:      pbResp.Success,
+		ErrorMessage: pbResp.ErrorMessage,
+	}
+}
+
+func PutSDPCandidatesResponse2Proto(resp *PutSDPCandidatesResponse) *pb.PutSDPCandidatesResponse {
+	return &pb.PutSDPCandidatesResponse{
+		Success:      resp.Success,
+		ErrorMessage: resp.ErrorMessage,
+	}
+}
+
+func Proto2GetSDPCandidatesRequest(pbReq *pb.GetSDPCandidatesRequest) *GetSDPCandidatesRequest {
+	return &GetSDPCandidatesRequest{
+		SourceUUID: pbReq.SourceUuid,
+		TargetUUID: pbReq.TargetUuid,
+	}
+}
+
+func GetSDPCandidatesRequest2Proto(req *GetSDPCandidatesRequest) *pb.GetSDPCandidatesRequest {
+	return &pb.GetSDPCandidatesRequest{
+		SourceUuid: req.SourceUUID,
+		TargetUuid: req.TargetUUID,
+	}
+}
+func Proto2GetSDPCandidatesResponse(pbResp *pb.GetSDPCandidatesResponse) *GetSDPCandidatesResponse {
+	return &GetSDPCandidatesResponse{
+		SourceUUID: pbResp.SourceUuid,
+		TargetUUID: pbResp.TargetUuid,
+		SDP:        pbResp.Sdp,
+		Candidates: pbResp.Candidates,
+	}
+}
+func GetSDPCandidatesResponse2Proto(resp *GetSDPCandidatesResponse) *pb.GetSDPCandidatesResponse {
+	return &pb.GetSDPCandidatesResponse{
+		SourceUuid: resp.SourceUUID,
+		TargetUuid: resp.TargetUUID,
+		Sdp:        resp.SDP,
+		Candidates: resp.Candidates,
+	}
+}

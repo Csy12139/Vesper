@@ -1,5 +1,0 @@
-syntax = "proto3";
-
-package proto;
-
-option go_package = "github.com/Csy12139/Vesper/proto";
