@@ -20,18 +20,19 @@ func runMainLoop() {
 	defer ticker.Stop()
 
 	cmdHandler := NewCommandHandler()
+	var results []common.CommandResult
 
 	for range ticker.C {
 		// Get command results before sending heartbeat
-		results := cmdHandler.GetResults()
-
+		// TODO(cissy) here is a bug, where heartbeat failed, results loss
+		results = append(results, cmdHandler.GetResults()...)
 		// Send heartbeat with results
 		resp, err := mnClient.DoHeartbeat(GlobalConfig.UUID, results)
 		if err != nil {
 			log.Errorf("Heartbeat failed: %v", err)
 			continue
 		}
-
+		results = nil
 		// Process commands from heartbeat response
 		for _, cmd := range resp.Commands {
 			log.Infof("Received command: type=%v", cmd.Type)
@@ -40,38 +41,29 @@ func runMainLoop() {
 	}
 }
 
-func test_put() {
+func put(req *common.PutSDPCandidatesRequest) {
 	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
 	if err != nil {
 		log.Fatalf("Failed to create MN client: %v", err)
 	}
-	req := common.PutSDPCandidatesRequest{
-		SourceUUID: "1",
-		TargetUUID: "2",
-		SDP:        "abc",
-		Candidates: nil,
-	}
-	resp, err := mnClient.PutSDPCandidates(&req)
+	resp, err := mnClient.PutSDPCandidates(req)
 	if err != nil {
 		log.Errorf("PutSDPCandidates failed: %v", err)
 	}
-	fmt.Println(resp)
+	log.Infof("PutSDPCandidates: %v", resp)
 }
 
-func test_get() {
+func get(req *common.GetSDPCandidatesRequest) (string, []string) {
 	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
 	if err != nil {
 		log.Fatalf("Failed to create MN client: %v", err)
 	}
-	req := common.GetSDPCandidatesRequest{
-		SourceUUID: "1",
-		TargetUUID: "2",
-	}
-	resp, err := mnClient.GetSDPCandidates(&req)
+	resp, err := mnClient.GetSDPCandidates(req)
 	if err != nil {
 		log.Errorf("GetSDPCandidates failed: %v", err)
 	}
-	fmt.Println(resp)
+	log.Infof("GetSDPCandidates: %v", resp)
+	return resp.SDP, resp.Candidates
 }
 
 func main() {
@@ -88,7 +80,5 @@ func main() {
 		log.Fatalf("Failed to initialize log: %v", err)
 	}
 
-	//runMainLoop()
-	test_put()
-	test_get()
+	runMainLoop()
 }

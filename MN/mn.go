@@ -18,6 +18,7 @@ func main() {
 
 	if err := log.InitLog(GlobalConfig.Log.LogDir, GlobalConfig.Log.MaxFileSizeMb, GlobalConfig.Log.MaxFileNum, GlobalConfig.Log.LogLevel); err != nil {
 		log.Fatalf("Failed to initialize log: %v", err)
+		fmt.Printf("Failed to initialize log: %v", err)
 	}
 
 	StartMNServer(GlobalConfig.MNNetwork, GlobalConfig.MNAddr)

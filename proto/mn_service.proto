@@ -28,10 +28,12 @@ message GetSDPCandidatesRequest{
 }
 
 message GetSDPCandidatesResponse{
-  string source_uuid = 1;
-  string target_uuid = 2;
-  string sdp = 3;
-  repeated string candidates = 4;
+  bool success = 1;
+  string error_message = 2;
+  string source_uuid = 3;
+  string target_uuid = 4;
+  string sdp = 5;
+  repeated string candidates = 6;
 }
 
 message HeartbeatRequest {

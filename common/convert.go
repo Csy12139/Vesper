@@ -161,17 +161,21 @@ func GetSDPCandidatesRequest2Proto(req *GetSDPCandidatesRequest) *pb.GetSDPCandi
 }
 func Proto2GetSDPCandidatesResponse(pbResp *pb.GetSDPCandidatesResponse) *GetSDPCandidatesResponse {
 	return &GetSDPCandidatesResponse{
-		SourceUUID: pbResp.SourceUuid,
-		TargetUUID: pbResp.TargetUuid,
-		SDP:        pbResp.Sdp,
-		Candidates: pbResp.Candidates,
+		Success:      pbResp.Success,
+		ErrorMessage: pbResp.ErrorMessage,
+		SourceUUID:   pbResp.SourceUuid,
+		TargetUUID:   pbResp.TargetUuid,
+		SDP:          pbResp.Sdp,
+		Candidates:   pbResp.Candidates,
 	}
 }
 func GetSDPCandidatesResponse2Proto(resp *GetSDPCandidatesResponse) *pb.GetSDPCandidatesResponse {
 	return &pb.GetSDPCandidatesResponse{
-		SourceUuid: resp.SourceUUID,
-		TargetUuid: resp.TargetUUID,
-		Sdp:        resp.SDP,
-		Candidates: resp.Candidates,
+		Success:      resp.Success,
+		ErrorMessage: resp.ErrorMessage,
+		SourceUuid:   resp.SourceUUID,
+		TargetUuid:   resp.TargetUUID,
+		Sdp:          resp.SDP,
+		Candidates:   resp.Candidates,
 	}
 }

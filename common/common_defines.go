@@ -70,8 +70,10 @@ type GetSDPCandidatesRequest struct {
 }
 
 type GetSDPCandidatesResponse struct {
-	SourceUUID string
-	TargetUUID string
-	SDP        string
-	Candidates []string
+	Success      bool
+	ErrorMessage string
+	SourceUUID   string
+	TargetUUID   string
+	SDP          string
+	Candidates   []string
 }
