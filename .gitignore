@@ -6,3 +6,6 @@
 /DN/logs/
 /proto/*.go
 /build/*
+/script/build/
+/script/build-test/
+/script/log/
