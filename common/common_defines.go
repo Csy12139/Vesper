@@ -1,12 +1,14 @@
 // CommandType represents different types of chunk operations
 package common
 
+import "time"
+
 type CommandType int32
 
 const (
 	CommandType_NO_OP        CommandType = 0
 	CommandType_READ_CHUNK   CommandType = 1
-	CommandType_WRITE_CHUNK  CommandType = 2
+	CommandType_ADD_CHUNK    CommandType = 2
 	CommandType_DELETE_CHUNK CommandType = 3
 )
 
@@ -22,8 +24,8 @@ type ReadChunkCmd struct {
 	TargetUUID string
 }
 
-// WriteChunkCmd represents a command to write a chunk
-type WriteChunkCmd struct {
+// AddChunkCmd represents a command to write a chunk
+type AddChunkCmd struct {
 	TargetUUID string
 }
 
@@ -37,8 +39,11 @@ type Command struct {
 	ID             uint64
 	Type           CommandType
 	ReadChunkCmd   *ReadChunkCmd
-	WriteChunkCmd  *WriteChunkCmd
+	AddChunkCmd    *AddChunkCmd
 	DeleteChunkCmd *DeleteChunkCmd
+	StartTimestamp time.Time
+	Timeout        time.Duration
+	CallBack       func(cmdId uint64, err error)
 }
 
 // HeartbeatRequest represents a heartbeat request from DN to MN
@@ -49,7 +54,7 @@ type HeartbeatRequest struct {
 
 // HeartbeatResponse represents MN's response to a heartbeat
 type HeartbeatResponse struct {
-	Commands []Command
+	Commands []*Command
 }
 
 type PutSDPCandidatesRequest struct {

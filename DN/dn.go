@@ -1,84 +1,71 @@
-package main
+package DN
 
 import (
-	"fmt"
-	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/Csy12139/Vesper/common"
 	"github.com/Csy12139/Vesper/log"
 )
 
-// runMainLoop handles the main DN logic - sending heartbeats and processing commands
-func runMainLoop() {
-	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
-	if err != nil {
-		log.Fatalf("Failed to create MN client: %v", err)
-	}
+type DataNode struct {
+	UUID       string
+	stop       atomic.Bool
+	MNAddr     string
+	mnClient   *common.MNClient
+	resultChan chan common.CommandResult
+	dataPath   string
+}
 
+func NewDataNode(UUID string, MNAddr string, DataPath string) (*DataNode, error) {
+	mnClient, err := common.NewMNClient(MNAddr)
+	if err != nil {
+		return nil, err
+	}
+	dn := DataNode{
+		UUID:       UUID,
+		MNAddr:     MNAddr,
+		mnClient:   mnClient,
+		resultChan: make(chan common.CommandResult, 100),
+		dataPath:   DataPath,
+	}
+	dn.stop.Store(true)
+	return &dn, nil
+}
+
+func (dn *DataNode) StartDataNode() {
+	dn.stop.Store(false)
+	go dn.doHeartbeatLoop()
+}
+
+func (dn *DataNode) doHeartbeatLoop() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	cmdHandler := NewCommandHandler()
-	var results []common.CommandResult
-
+	results := make([]common.CommandResult, 0)
 	for range ticker.C {
-		// Get command results before sending heartbeat
-		// TODO(cissy) here is a bug, where heartbeat failed, results loss
-		results = append(results, cmdHandler.GetResults()...)
-		// Send heartbeat with results
-		resp, err := mnClient.DoHeartbeat(GlobalConfig.UUID, results)
+		if dn.stop.Load() {
+			return
+		}
+		results = append(results, dn.GetCommandResults()...)
+		resp, err := dn.mnClient.DoHeartbeat(dn.UUID, results)
 		if err != nil {
 			log.Errorf("Heartbeat failed: %v", err)
 			continue
 		}
-		results = nil
+		results = make([]common.CommandResult, 0)
 		// Process commands from heartbeat response
 		for _, cmd := range resp.Commands {
 			log.Infof("Received command: type=%v", cmd.Type)
-			cmdHandler.HandleCommand(cmd)
+			dn.HandleCommand(cmd)
 		}
 	}
 }
 
-func put(req *common.PutSDPCandidatesRequest) {
-	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
-	if err != nil {
-		log.Fatalf("Failed to create MN client: %v", err)
-	}
-	resp, err := mnClient.PutSDPCandidates(req)
-	if err != nil {
-		log.Errorf("PutSDPCandidates failed: %v", err)
-	}
-	log.Infof("PutSDPCandidates: %v", resp)
+func (dn *DataNode) IsRunning() bool {
+	return !dn.stop.Load()
 }
 
-func get(req *common.GetSDPCandidatesRequest) (string, []string) {
-	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
-	if err != nil {
-		log.Fatalf("Failed to create MN client: %v", err)
-	}
-	resp, err := mnClient.GetSDPCandidates(req)
-	if err != nil {
-		log.Errorf("GetSDPCandidates failed: %v", err)
-	}
-	log.Infof("GetSDPCandidates: %v", resp)
-	return resp.SDP, resp.Candidates
-}
-
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s <config_file>", os.Args[0])
-	}
-
-	err := loadConfig(os.Args[1])
-	if err != nil {
-		fmt.Printf("Failed to load config: %v", err)
-	}
-
-	if err := log.InitLog(GlobalConfig.Log.LogDir, GlobalConfig.Log.MaxFileSizeMb, GlobalConfig.Log.MaxFileNum, GlobalConfig.Log.LogLevel); err != nil {
-		log.Fatalf("Failed to initialize log: %v", err)
-	}
-
-	runMainLoop()
+func (dn *DataNode) StopMetaNode() {
+	dn.stop.Store(true)
 }

@@ -1,4 +1,4 @@
-package main
+package DN
 
 import (
 	"fmt"
@@ -9,14 +9,14 @@ import (
 )
 
 // AddChunk creates a new chunk with the given chunk
-func AddChunk(chunk *common.Chunk) error {
+func (dn *DataNode) AddChunk(chunk *common.Chunk) error {
 	// Verify data size
 	if len(chunk.Data) != common.ChunkSize {
 		return fmt.Errorf("invalid chunk size: got %d bytes, want %d bytes", len(chunk.Data), common.ChunkSize)
 	}
 
 	// Create chunk file path using configured data directory
-	chunkPath := filepath.Join(GlobalConfig.DataPath, fmt.Sprintf("%d", chunk.ID))
+	chunkPath := filepath.Join(dn.dataPath, fmt.Sprintf("%d", chunk.ID))
 
 	// Create file with O_EXCL flag to ensure atomic creation
 	file, err := os.OpenFile(chunkPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
@@ -40,9 +40,9 @@ func AddChunk(chunk *common.Chunk) error {
 }
 
 // GetChunk reads and returns the chunk with the given ID
-func GetChunk(id uint64) (*common.Chunk, error) {
-	chunkPath := filepath.Join(GlobalConfig.DataPath, fmt.Sprintf("%d", id))
-	
+func (dn *DataNode) GetChunk(id uint64) (*common.Chunk, error) {
+	chunkPath := filepath.Join(dn.dataPath, fmt.Sprintf("%d", id))
+
 	data, err := os.ReadFile(chunkPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -62,9 +62,9 @@ func GetChunk(id uint64) (*common.Chunk, error) {
 }
 
 // RemoveChunk deletes the chunk with the given ID
-func RemoveChunk(id uint64) error {
-	chunkPath := filepath.Join(GlobalConfig.DataPath, fmt.Sprintf("%d", id))
-	
+func (dn *DataNode) RemoveChunk(id uint64) error {
+	chunkPath := filepath.Join(dn.dataPath, fmt.Sprintf("%d", id))
+
 	err := os.Remove(chunkPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -72,8 +72,6 @@ func RemoveChunk(id uint64) error {
 		}
 		return fmt.Errorf("failed to remove chunk: %w", err)
 	}
-	
+
 	return nil
 }
-
-
