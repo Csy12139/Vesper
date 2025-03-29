@@ -1,0 +1,11 @@
+{
+  "uuid": "wtpsk1m32",
+  "log": {
+    "logDir": "./log",
+    "maxFileSizeMb": 100,
+    "maxFileNum": 10,
+    "logLevel": "INFO"
+  },
+  "data_path": "./data",
+  "mn_addr": "127.0.0.1:50051"
+}

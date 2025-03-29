@@ -17,7 +17,7 @@ func Proto2Command(pbCmd *pb.Command) *Command {
 			TargetUUID: c.ReadChunkCmd.TargetUuid,
 		}
 	case *pb.Command_WriteChunkCmd:
-		cmd.WriteChunkCmd = &WriteChunkCmd{
+		cmd.AddChunkCmd = &AddChunkCmd{
 			TargetUUID: c.WriteChunkCmd.TargetUuid,
 		}
 	case *pb.Command_DeleteChunkCmd:
@@ -43,10 +43,10 @@ func Command2Proto(cmd *Command) *pb.Command {
 				TargetUuid: cmd.ReadChunkCmd.TargetUUID,
 			},
 		}
-	case cmd.WriteChunkCmd != nil:
+	case cmd.AddChunkCmd != nil:
 		pbCmd.Command = &pb.Command_WriteChunkCmd{
 			WriteChunkCmd: &pb.WriteChunkCmd{
-				TargetUuid: cmd.WriteChunkCmd.TargetUUID,
+				TargetUuid: cmd.AddChunkCmd.TargetUUID,
 			},
 		}
 	case cmd.DeleteChunkCmd != nil:
@@ -94,9 +94,9 @@ func HeartbeatRequest2Proto(req *HeartbeatRequest) *pb.HeartbeatRequest {
 
 // Proto2HeartbeatResponse converts a protobuf HeartbeatResponse to internal format
 func Proto2HeartbeatResponse(pbResp *pb.HeartbeatResponse) *HeartbeatResponse {
-	commands := make([]Command, len(pbResp.Commands))
+	commands := make([]*Command, len(pbResp.Commands))
 	for i, pbCmd := range pbResp.Commands {
-		commands[i] = *Proto2Command(pbCmd)
+		commands[i] = Proto2Command(pbCmd)
 	}
 	return &HeartbeatResponse{
 		Commands: commands,
@@ -107,7 +107,7 @@ func Proto2HeartbeatResponse(pbResp *pb.HeartbeatResponse) *HeartbeatResponse {
 func HeartbeatResponse2Proto(resp *HeartbeatResponse) *pb.HeartbeatResponse {
 	pbCommands := make([]*pb.Command, len(resp.Commands))
 	for i, cmd := range resp.Commands {
-		pbCommands[i] = Command2Proto(&cmd)
+		pbCommands[i] = Command2Proto(cmd)
 	}
 	return &pb.HeartbeatResponse{
 		Commands: pbCommands,
