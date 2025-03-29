@@ -1,8 +1,8 @@
-package main
+package test
 
 import (
 	"fmt"
-	main2 "github.com/Csy12139/Vesper/DNmain"
+	"github.com/Csy12139/Vesper/DN"
 	"github.com/Csy12139/Vesper/common"
 	"github.com/Csy12139/Vesper/log"
 	"os"
@@ -26,12 +26,12 @@ func TestPutAndGet(t *testing.T) {
 		fmt.Printf("Usage: %s <config_file>", os.Args[0])
 	}
 
-	err := main2.loadConfig(os.Args[1])
+	err := main.loadConfig(os.Args[1])
 	if err != nil {
 		fmt.Printf("Failed to load config: %v", err)
 	}
 
-	if err := log.InitLog(main2.GlobalConfig.Log.LogDir, main2.GlobalConfig.Log.MaxFileSizeMb, main2.GlobalConfig.Log.MaxFileNum, main2.GlobalConfig.Log.LogLevel); err != nil {
+	if err := log.InitLog(main.GlobalConfig.Log.LogDir, main.GlobalConfig.Log.MaxFileSizeMb, main.GlobalConfig.Log.MaxFileNum, main.GlobalConfig.Log.LogLevel); err != nil {
 		log.Fatalf("Failed to initialize log: %v", err)
 	}
 	putRequest := common.PutSDPCandidatesRequest{
@@ -40,11 +40,11 @@ func TestPutAndGet(t *testing.T) {
 		SDP:        "abc",
 		Candidates: []string{"a", "b", "c"},
 	}
-	put(&putRequest)
+	main.put(&putRequest)
 
 	time.Sleep(1 * time.Second)
 
-	sdp, candidates := get(&common.GetSDPCandidatesRequest{
+	sdp, candidates := main.get(&common.GetSDPCandidatesRequest{
 		SourceUUID: "1",
 		TargetUUID: "2",
 	})
