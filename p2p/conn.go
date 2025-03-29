@@ -93,9 +93,8 @@ func (s *session) createOffer() (string, []string, error) {
 func (s *session) waitGatherComplete() {
 	<-s.gatherDone
 }
-func (s *session) closeP2PConnection() error {
+func (s *session) closeP2PConnection() {
 	s.ctxCancel()
-	return nil
 }
 func (s *session) initP2PConnection() (string, []string, error) {
 	err := s.setupP2PConnection()
@@ -114,7 +113,7 @@ func (s *session) initP2PConnection() (string, []string, error) {
 
 	return sdpOffer, candidates, nil
 }
-func (s *session) putRequest(req *common.PutSDPCandidatesRequest) (bool, error) {
+func (s *session) putRequest(req *common.PutSDPCandidatesRequest) error {
 	mnClient, err := common.NewMNClient(s.mnAddr)
 	if err != nil {
 		log.Fatalf("Failed to create MN client: %v", err)
@@ -124,7 +123,7 @@ func (s *session) putRequest(req *common.PutSDPCandidatesRequest) (bool, error) 
 		log.Errorf("PutSDPCandidates failed: %v", err)
 	}
 	log.Infof("PutSDPCandidates: %v", resp)
-	return resp.Success, err
+	return err
 }
 func (s *session) getRequest(req *common.GetSDPCandidatesRequest) (string, []string) {
 	mnClient, err := common.NewMNClient(s.mnAddr)
@@ -138,16 +137,27 @@ func (s *session) getRequest(req *common.GetSDPCandidatesRequest) (string, []str
 	log.Infof("GetSDPCandidates: %v", resp)
 	return resp.SDP, resp.Candidates
 }
-func (s *session) exchangeSDPCandidates(sourceUUID string, targetUUID string, sdpOffer string, candidates []string) {
-	putRequest := common.PutSDPCandidatesRequest{
-		SourceUUID: sourceUUID,
-		TargetUUID: targetUUID,
-		SDP:        sdpOffer,
-		Candidates: candidates,
-	}
-	s.putRequest(&putRequest)
 
-}
+//	func (s *session) exchangeSDPCandidates(sourceUUID string, targetUUID string, sdpOffer string, candidates []string) error {
+//		putRequest := common.PutSDPCandidatesRequest{
+//			SourceUUID: sourceUUID,
+//			TargetUUID: targetUUID,
+//			SDP:        sdpOffer,
+//			Candidates: candidates,
+//		}
+//		err := s.putRequest(&putRequest)
+//		if err != nil {
+//			log.Errorf("PutSDPCandidates failed: %v", err)
+//			return err
+//		}
+//
+//		getRequest := common.GetSDPCandidatesRequest{
+//			SourceUUID: sourceUUID,
+//			TargetUUID: targetUUID,
+//		}
+//		sdp, candidates := s.getRequest(&getRequest)
+//
+// }
 func (s *session) connClose() {
 	<-s.ctx.Done()
 
