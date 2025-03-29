@@ -1,11 +1,2 @@
-/MN/mn
-/SDK/sdk
-/SDK/logs/
-/MN/logs/
-/DN/dn
-/DN/logs/
 /proto/*.go
-/build/*
-/script/build/
-/script/build-test/
-/script/log/
+/build/

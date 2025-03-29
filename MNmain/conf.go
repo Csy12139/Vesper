@@ -1,4 +1,4 @@
-package main
+package MNmain
 
 import (
 	"encoding/json"

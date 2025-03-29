@@ -1,6 +1,8 @@
 // CommandType represents different types of chunk operations
 package common
 
+import "time"
+
 type CommandType int32
 
 const (
@@ -39,6 +41,9 @@ type Command struct {
 	ReadChunkCmd   *ReadChunkCmd
 	WriteChunkCmd  *WriteChunkCmd
 	DeleteChunkCmd *DeleteChunkCmd
+	StartTimestamp time.Time
+	Timeout        time.Duration
+	CallBack       func(err error)
 }
 
 // HeartbeatRequest represents a heartbeat request from DN to MN

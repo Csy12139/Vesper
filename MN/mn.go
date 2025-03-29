@@ -1,25 +1,46 @@
-package main
+package MN
 
 import (
-	"fmt"
-	"github.com/Csy12139/Vesper/log"
-	"os"
+	pb "github.com/Csy12139/Vesper/proto"
+	"google.golang.org/grpc"
+	"log"
+	"net"
+	"sync"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s <config_file>", os.Args[0])
-	}
+type MNServer struct {
+	MNNetwork string
+	MNAddr    string
+	mu        sync.RWMutex
+	// TODO change to map[string][string]
+	// TODO add timestamp
+	SDPCandidatesMap map[string]*pb.PutSDPCandidatesRequest
+	grpcServer       *grpc.Server
+}
 
-	err := loadConfig(os.Args[1])
-	if err != nil {
-		fmt.Printf("Failed to load config: %v", err)
-	}
+func NewMNServer(MNAddr string) (*MNServer, error) {
+	return &MNServer{
+		MNNetwork:        "tcp",
+		MNAddr:           MNAddr,
+		SDPCandidatesMap: make(map[string][]*pb.PutSDPCandidatesRequest),
+	}, nil
+}
 
-	if err := log.InitLog(GlobalConfig.Log.LogDir, GlobalConfig.Log.MaxFileSizeMb, GlobalConfig.Log.MaxFileNum, GlobalConfig.Log.LogLevel); err != nil {
-		log.Fatalf("Failed to initialize log: %v", err)
-		fmt.Printf("Failed to initialize log: %v", err)
-	}
+func (mn *MNServer) StartMNServer() {
+	go func() {
+		lis, err := net.Listen(mn.MNNetwork, mn.MNAddr)
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
+		}
+		mn.grpcServer = grpc.NewServer()
+		pb.RegisterMNServiceServer(mn.grpcServer, mn)
+		log.Printf("Server listening at %v", lis.Addr())
+		if err := mn.grpcServer.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
+}
 
-	StartMNServer(GlobalConfig.MNNetwork, GlobalConfig.MNAddr)
+func (mn *MNServer) StopMNServer() {
+	mn.grpcServer.Stop()
 }
