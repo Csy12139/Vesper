@@ -13,9 +13,8 @@ type P2PConnection struct {
 
 	conn *webrtc.PeerConnection
 
-	dataCh   *webrtc.DataChannel
-	msgChMap map[string]chan *webrtc.DataChannelMessage
-	mu       sync.Mutex
+	//dataCh *webrtc.DataChannel
+	//msgCh  chan webrtc.DataChannelMessage
 
 	candidates     []webrtc.ICECandidateInit
 	candidatesLock sync.Mutex
@@ -27,7 +26,6 @@ type P2PConnection struct {
 func NewP2PConnection() (*P2PConnection, error) {
 	p := &P2PConnection{
 		gatherDone: make(chan struct{}, 1),
-		msgChMap:   make(map[string]chan *webrtc.DataChannelMessage),
 	}
 
 	conn, err := webrtc.NewPeerConnection(webrtc.Configuration{
@@ -46,7 +44,30 @@ func NewP2PConnection() (*P2PConnection, error) {
 		return nil, err
 	}
 	p.conn = conn
-	p.registerConnectionCallback()
+	p.conn.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+		log.Info("connection state:", connectionState)
+		switch connectionState {
+		case webrtc.ICEConnectionStateFailed:
+			p.CloseConnection()
+		default:
+		}
+	})
+	p.conn.OnICEGatheringStateChange(func(state webrtc.ICEGatheringState) {
+		log.Info("gathering state:", state.String())
+		if state == webrtc.ICEGatheringStateComplete {
+			close(p.gatherDone)
+		}
+	})
+	p.conn.OnICECandidate(func(candidate *webrtc.ICECandidate) {
+		if candidate == nil {
+			log.Info("find ICECandidate is nil")
+			return
+		}
+		log.Infof("find a new ICECandidate: %+v", candidate.String())
+		p.candidatesLock.Lock()
+		defer p.candidatesLock.Unlock()
+		p.candidates = append(p.candidates, candidate.ToJSON())
+	})
 
 	_, err = p.conn.CreateDataChannel("init", nil)
 	if err != nil {
@@ -114,55 +135,110 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 	if err != nil {
 		return err
 	}
-	p.registerChannelCallback(label, ch)
-
+	ch.OnClose(func() {
+		log.Info("DataChannel closed:", ch.Label())
+	})
+	// Wait DataChannel Open
+	timeoutChan := time.After(timeout)
 	for !(ch.ReadyState() == webrtc.DataChannelStateOpen) {
 		select {
-		case <-time.After(timeout):
+		case <-timeoutChan:
 			return fmt.Errorf("wait connection timed out after %v", timeout)
 		default:
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- ch.Send(data)
-	}()
-
-	select {
-	case err := <-errCh:
-		if err != nil {
-			log.Info("send data error: ", err)
-			return fmt.Errorf("send data failed: %w", err)
+	// Send data
+	const bufferedAmountLowThreshold = 4 * 1024
+	ch.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
+	offset := 0
+	dataLen := len(data)
+	allSent := make(chan struct{})
+	var mu sync.Mutex
+	sendNextChunk := func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if offset >= dataLen {
+			log.Info("All data sent to buffer")
+			close(allSent)
+			return
 		}
-		return nil
-	case <-time.After(timeout):
-		log.Info("send data timeout")
-		return fmt.Errorf("send data timed out after %v", timeout)
-	}
+		end := offset + bufferedAmountLowThreshold
+		if end > dataLen {
+			end = dataLen
+		}
+		chunk := data[offset:end]
 
+		if err := ch.Send(chunk); err != nil {
+			log.Errorf("Send chunk %d-%d failed: %v", offset, end, err)
+			ch.Close()
+			return
+		}
+		log.Infof("Sent chunk %d-%d bytes", offset, end)
+		offset = end
+	}
+	ch.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
+	ch.OnBufferedAmountLow(func() {
+		log.Infof("BufferedAmountLow triggered, current: %d", ch.BufferedAmount())
+		sendNextChunk()
+	})
+	// Initial sending
+	sendNextChunk()
+	// Wait for all data send to buffer
+	select {
+	case <-allSent:
+		log.Info("All chunks sent to buffer")
+	case <-time.After(timeout):
+		ch.Close()
+		return fmt.Errorf("send data to buffer timed out after %v", timeout)
+	}
+	// Wait for the buffer to be cleared.
+	log.Infof("Waiting for buffer to clear, current BufferedAmount: %d", ch.BufferedAmount())
+	timeoutChan = time.After(timeout)
+
+	for ch.BufferedAmount() > 0 {
+		select {
+		case <-timeoutChan:
+			ch.Close()
+			return fmt.Errorf("wait buffer clear timed out after %v", timeout)
+		default:
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	log.Infof("All data sent.")
+	ch.Close()
+	return nil
 }
 
-func (p *P2PConnection) RegisterReceiveDataCallback(label string, callback func(label string, data []byte)) error {
-	p.mu.Lock()
-	p.msgChMap[label] = make(chan *webrtc.DataChannelMessage, 200)
-	msgCh := p.msgChMap[label]
-	p.mu.Unlock()
+func (p *P2PConnection) RegisterReceiveDataCallback(callback func(label string, data []byte)) error {
+	msgCh := make(chan webrtc.DataChannelMessage, 200)
 
 	p.conn.OnDataChannel(func(ch *webrtc.DataChannel) {
-		if ch.Label() == label {
-			p.registerChannelCallback(label, ch)
-
-			go func() {
-				for msg := range msgCh {
-					log.Infof("Received data of %d bytes on %s", len(msg.Data), label)
-					callback(label, msg.Data)
-				}
-				log.Info("Message channel closed for:", label)
-				ch.Close()
-			}()
+		if ch.Label() == "init" {
+			return
 		}
+		ch.OnOpen(func() {
+			log.Infof("%s dataChannel opened", ch.Label())
+		})
+		ch.OnClose(func() {
+			log.Infof("%s dataChannel closed", ch.Label())
+			close(msgCh)
+		})
+		ch.OnMessage(func(msg webrtc.DataChannelMessage) {
+			select {
+			case msgCh <- msg:
+			default:
+				log.Warnf("msgCh full or closed for %s", ch.Label())
+			}
+		})
+		go func() {
+			var receivedData []byte
+			for msg := range msgCh {
+				log.Infof("Received data of %d bytes on %s", len(msg.Data), ch.Label())
+				receivedData = append(receivedData, msg.Data...)
+			}
+			callback(ch.Label(), receivedData)
+		}()
 	})
 	return nil
 }
@@ -221,47 +297,6 @@ func (p *P2PConnection) getLocalDescription(Description webrtc.SessionDescriptio
 		return "", err
 	}
 	return encodedSDP, nil
-}
-
-func (p *P2PConnection) registerConnectionCallback() {
-	p.conn.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
-		log.Info("connection state:", connectionState)
-		switch connectionState {
-		case webrtc.ICEConnectionStateFailed:
-			p.CloseConnection()
-		default:
-		}
-	})
-	p.conn.OnICEGatheringStateChange(func(state webrtc.ICEGatheringState) {
-		log.Info("gathering state:", state.String())
-		if state == webrtc.ICEGatheringStateComplete {
-			close(p.gatherDone)
-		}
-	})
-	p.conn.OnICECandidate(func(candidate *webrtc.ICECandidate) {
-		if candidate == nil {
-			log.Info("find ICECandidate is nil")
-			return
-		}
-		log.Infof("find a new ICECandidate: %+v", candidate.String())
-		p.candidatesLock.Lock()
-		defer p.candidatesLock.Unlock()
-		p.candidates = append(p.candidates, candidate.ToJSON())
-	})
-
-}
-
-func (p *P2PConnection) registerChannelCallback(label string, ch *webrtc.DataChannel) {
-	// p.dataCh = ch
-	ch.OnClose(func() {
-		// p.CloseConnection()
-		log.Info("DataChannel closed:", ch.Label())
-	})
-	ch.OnMessage(func(msg webrtc.DataChannelMessage) {
-		p.mu.Lock()
-		p.msgChMap[label] <- &msg
-		p.mu.Unlock()
-	})
 }
 
 func (p *P2PConnection) waitGatherComplete() {

@@ -12,8 +12,7 @@ import (
 var offerReady = make(chan bool)
 var answerReady = make(chan bool)
 var callbackReady = make(chan bool, 1)
-var receiveData = make(chan bool)
-var DataSize = 1 * 1024 * 1024
+var DataSize = 1024 * 1024
 
 func WriteFile(sdpPath string, CandidatesPath string, sdp string, candidate []string) error {
 	if _, err := os.Stat(sdpPath); err == nil {
@@ -86,7 +85,6 @@ func Sender(t *testing.T) {
 	if err != nil {
 		t.Fatal("[Sender]SendDate failed: " + err.Error())
 	}
-	<-receiveData
 }
 
 func Receiver(t *testing.T) {
@@ -112,23 +110,24 @@ func Receiver(t *testing.T) {
 	if err != nil {
 		t.Fatal("[Receiver]WaitConnection failed: " + err.Error())
 	}
-	err = pc.RegisterReceiveDataCallback("test", func(label string, data []byte) {
+	callbackReady <- false
+	err = pc.RegisterReceiveDataCallback(func(label string, data []byte) {
 		for _, b := range data {
 			if b != 0 {
-				t.Error("[Receiver]The received data is incorrect.")
+				t.Errorf("[Receiver]The received data from %s is incorrect.", label)
 			}
 		}
 		if len(data) != DataSize {
 			t.Error("[Receiver]The received data length is incorrect.")
 		}
-		t.Logf("[Receiver]The received data lable is %s.", label)
 		callbackReady <- true
 	})
 	if err != nil {
 		t.Fatal("[Receiver]RegisterReceiveDataCallback failed: " + err.Error())
 	}
-	<-callbackReady
-	receiveData <- true
+	for !<-callbackReady {
+
+	}
 }
 
 func TestP2P(t *testing.T) {
