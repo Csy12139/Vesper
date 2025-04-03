@@ -48,7 +48,10 @@ func NewP2PConnection() (*P2PConnection, error) {
 		log.Info("connection state:", connectionState)
 		switch connectionState {
 		case webrtc.ICEConnectionStateFailed:
-			p.CloseConnection()
+			err := p.conn.GracefulClose()
+			if err != nil {
+				log.Error("Error closing peer connection:", err)
+			}
 		default:
 		}
 	})
@@ -149,21 +152,16 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 		}
 	}
 	// Send data
-	//bufferedAmountLowThreshold
 	const bufferedAmountLowThreshold = 1 * 1024 * 1024
 	offset := 0
+	var end int
 	dataLen := len(data)
-	allSent := make(chan struct{})
-	var mu sync.Mutex
 	sendNextChunk := func() {
-		mu.Lock()
-		defer mu.Unlock()
 		if offset >= dataLen {
 			log.Info("All data sent to buffer")
-			close(allSent)
 			return
 		}
-		end := offset + bufferedAmountLowThreshold
+		end = offset + bufferedAmountLowThreshold
 		if end > dataLen {
 			end = dataLen
 		}
@@ -180,24 +178,12 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 	ch.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
 	ch.OnBufferedAmountLow(func() {
 		log.Infof("BufferedAmountLow triggered, current: %d", ch.BufferedAmount())
-		//log.Infof("Now bufferedAmountLowThreshold:%v", ch.BufferedAmountLowThreshold())
 		sendNextChunk()
 	})
 	// Initial sending
 	sendNextChunk()
-	// Wait for all data send to buffer
-	select {
-	case <-allSent:
-		log.Info("All chunks sent to buffer")
-	case <-time.After(timeout):
-		ch.Close()
-		return fmt.Errorf("send data to buffer timed out after %v", timeout)
-	}
-	// Wait for the buffer to be cleared.
-	log.Infof("Waiting for buffer to clear, current BufferedAmount: %d", ch.BufferedAmount())
-	timeoutChan = time.After(timeout)
-
-	for ch.BufferedAmount() > 0 {
+	// Wait data send over and wait buffer decrease to zero
+	for ch.BufferedAmount() > 0 || end < dataLen {
 		select {
 		case <-timeoutChan:
 			ch.Close()
@@ -212,9 +198,8 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 }
 
 func (p *P2PConnection) RegisterReceiveDataCallback(callback func(label string, data []byte)) error {
-	msgCh := make(chan webrtc.DataChannelMessage, 200)
-
 	p.conn.OnDataChannel(func(ch *webrtc.DataChannel) {
+		msgCh := make(chan webrtc.DataChannelMessage, 200)
 		if ch.Label() == "init" {
 			return
 		}
@@ -242,15 +227,6 @@ func (p *P2PConnection) RegisterReceiveDataCallback(callback func(label string, 
 		}()
 	})
 	return nil
-}
-
-func (p *P2PConnection) CloseConnection() {
-	if p.conn == nil {
-		err := p.conn.GracefulClose()
-		if err != nil {
-			log.Error("Error closing peer connection:", err)
-		}
-	}
 }
 
 func (p *P2PConnection) SetRemotedDescription(remotedSdp string, remotedCandidates []string) error {

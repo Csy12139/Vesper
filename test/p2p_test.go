@@ -1,7 +1,8 @@
-package p2p
+package test
 
 import (
 	"github.com/Csy12139/Vesper/log"
+	"github.com/Csy12139/Vesper/p2p"
 	"os"
 	"strings"
 	"sync"
@@ -11,8 +12,8 @@ import (
 
 var offerReady = make(chan bool)
 var answerReady = make(chan bool)
-var callbackReady = make(chan bool, 1)
-var DataSize = 32 * 1024 * 1024
+var testReady = make(chan bool, 1)
+var DataSize = 10 * 1024 * 1024
 
 func WriteFile(sdpPath string, CandidatesPath string, sdp string, candidate []string) error {
 	if _, err := os.Stat(sdpPath); err == nil {
@@ -54,7 +55,7 @@ func ReadFile(sdpPath string, CandidatesPath string) (string, []string, error) {
 }
 
 func Sender(t *testing.T) {
-	pc, err := NewP2PConnection()
+	pc, err := p2p.NewP2PConnection()
 	if err != nil {
 		t.Fatal("[Sender]NewP2PConnection failed: " + err.Error())
 	}
@@ -85,10 +86,15 @@ func Sender(t *testing.T) {
 	if err != nil {
 		t.Fatal("[Sender]SendDate failed: " + err.Error())
 	}
+	//data = bytes.Repeat([]byte{1}, DataSize)
+	err = pc.SendDate("another", data, time.Minute)
+	if err != nil {
+		t.Fatal("[Sender]SendDate failed: " + err.Error())
+	}
 }
 
 func Receiver(t *testing.T) {
-	pc, err := NewP2PConnection()
+	pc, err := p2p.NewP2PConnection()
 	if err != nil {
 		t.Fatal("[Receiver]NewP2PConnection failed: " + err.Error())
 	}
@@ -110,7 +116,7 @@ func Receiver(t *testing.T) {
 	if err != nil {
 		t.Fatal("[Receiver]WaitConnection failed: " + err.Error())
 	}
-	callbackReady <- false
+	testReady <- false
 	err = pc.RegisterReceiveDataCallback(func(label string, data []byte) {
 		for _, b := range data {
 			if b != 0 {
@@ -120,13 +126,13 @@ func Receiver(t *testing.T) {
 		if len(data) != DataSize {
 			t.Error("[Receiver]The received data length is incorrect.")
 		}
-		callbackReady <- true
+		testReady <- true
 	})
 	if err != nil {
 		t.Fatal("[Receiver]RegisterReceiveDataCallback failed: " + err.Error())
 	}
-	for !<-callbackReady {
-
+	for !<-testReady {
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
