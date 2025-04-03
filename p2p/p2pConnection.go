@@ -149,8 +149,8 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 		}
 	}
 	// Send data
-	const bufferedAmountLowThreshold = 4 * 1024
-	ch.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
+	//bufferedAmountLowThreshold
+	const bufferedAmountLowThreshold = 1 * 1024 * 1024
 	offset := 0
 	dataLen := len(data)
 	allSent := make(chan struct{})
@@ -180,6 +180,7 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 	ch.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
 	ch.OnBufferedAmountLow(func() {
 		log.Infof("BufferedAmountLow triggered, current: %d", ch.BufferedAmount())
+		//log.Infof("Now bufferedAmountLowThreshold:%v", ch.BufferedAmountLowThreshold())
 		sendNextChunk()
 	})
 	// Initial sending

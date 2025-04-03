@@ -12,7 +12,7 @@ import (
 var offerReady = make(chan bool)
 var answerReady = make(chan bool)
 var callbackReady = make(chan bool, 1)
-var DataSize = 1024 * 1024
+var DataSize = 32 * 1024 * 1024
 
 func WriteFile(sdpPath string, CandidatesPath string, sdp string, candidate []string) error {
 	if _, err := os.Stat(sdpPath); err == nil {
