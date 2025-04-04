@@ -8,6 +8,71 @@ service MNService {
   rpc DoHeartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
   rpc PutSDPCandidates(PutSDPCandidatesRequest) returns (PutSDPCandidatesResponse) {}
   rpc GetSDPCandidates(GetSDPCandidatesRequest) returns (GetSDPCandidatesResponse) {}
+  rpc AddChunkMeta(AddChunkMetaRequest) returns (AddChunkMetaResponse) {}
+  rpc CompleteAddChunkMeta(CompleteAddChunkMetaRequest) returns (CompleteAddChunkMetaResponse) {}
+  rpc GetChunkMeta(GetChunkMetaRequest) returns (GetChunkMetaResponse) {}
+  rpc AllocateDnForChunk (AllocateDnForChunkRequest) returns (AllocateDnForChunkResponse) {}
+  rpc AddChunkOnDN(AddChunkOnDNRequest) returns (AddChunkOnDNResponse) {}
+  rpc CompleteAddChunkOnDN(CompleteAddChunkOnDNRequest) returns (CompleteAddChunkOnDNResponse) {}
+}
+enum ErrorCode {
+  OK = 0;
+  SDP_NOT_FOUND = 10000;
+  CHUNK_NOT_FOUND=10010;
+  NO_AVAILABLE_DN = 10011;
+  COMMIT_DN_CMD_TIMEOUT = 10012;
+  DN_NOT_FOUND = 10013;
+  
+  UNKNOWN = 50000;
+}
+
+
+message AllocateDnForChunkRequest{
+  uint64 chunkId = 1;
+  repeated string excludes = 2;
+}
+
+message AllocateDnForChunkResponse{
+  string uuid = 1;
+  ErrorCode code = 2;
+}
+
+message GetChunkMetaRequest{
+  uint64 chunkId = 1;
+}
+message GetChunkMetaResponse{
+  ChunkMeta meta = 1;
+  ErrorCode code = 2;
+}
+
+message CompleteAddChunkMetaRequest{
+  uint64 chunkId = 1;
+}
+
+message CompleteAddChunkMetaResponse{
+
+}
+
+message CompleteAddChunkOnDNRequest{
+  uint64 chunkId = 1;
+  string uuid = 2;
+}
+message CompleteAddChunkOnDNResponse{
+  ErrorCode code = 1;
+}
+message AddChunkOnDNRequest{
+  string sdk_uuid = 1;
+  string dn_uuid = 2;
+}
+message AddChunkOnDNResponse{
+  ErrorCode code = 1;
+}
+message AddChunkMetaRequest{
+
+}
+
+message AddChunkMetaResponse{
+  uint64 chunkId = 1;
 }
 
 message PutSDPCandidatesRequest{
@@ -68,7 +133,7 @@ message DeleteChunkCmd {
 message Command {
   uint64 id = 1;        // Unique command ID
   CommandType type = 2;  // Required
-  oneof command {        // Optional based on type
+  oneof command {// Optional based on type
     ReadChunkCmd read_chunk_cmd = 3;
     WriteChunkCmd write_chunk_cmd = 4;
     DeleteChunkCmd delete_chunk_cmd = 5;
@@ -84,3 +149,14 @@ message CommandResult {
 message HeartbeatResponse {
   repeated Command commands = 1;
 }
+enum ChunkState {
+  CREATING = 0;
+  CREATED = 1;
+}
+
+message ChunkMeta {
+  uint64 id = 1;
+  ChunkState state = 2;
+  repeated string dn_uuids = 3;
+}
+

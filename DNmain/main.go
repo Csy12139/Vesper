@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/Csy12139/Vesper/DN"
-	"github.com/Csy12139/Vesper/log"
 	"os"
 	"time"
+
+	"github.com/Csy12139/Vesper/DN"
+	"github.com/Csy12139/Vesper/log"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize DN: %v", err)
 	}
-	dn.StartDataNode()
+	dn.Start()
 	for dn.IsRunning() {
 		time.Sleep(10 * time.Second)
 	}

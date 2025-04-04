@@ -33,7 +33,7 @@ func NewDataNodeInfo() *DataNodeInfo {
 	}
 }
 
-func (dn *DataNodeInfo) SubmitAddChunkCmd(targetUUID string, timeout time.Duration, cb func(cmdId uint64, err error)) {
+func (dn *DataNodeInfo) SubmitAddChunkCmd(targetUUID string, timeout time.Duration, cb func(cmdId uint64, err error)) uint64{
 	cmd := &common.Command{
 		ID:             cmdId.Add(1),
 		Type:           common.CommandType_ADD_CHUNK,
@@ -45,6 +45,7 @@ func (dn *DataNodeInfo) SubmitAddChunkCmd(targetUUID string, timeout time.Durati
 		CallBack:       cb,
 	}
 	dn.cmdQueue <- cmd
+	return cmd.ID
 }
 
 func (dn *DataNodeInfo) SetDead() {

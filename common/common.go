@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/binary"
 	"os"
 	"path/filepath"
 )
@@ -14,14 +15,12 @@ func GetExecName() (string, error) {
 	// log.Infof("execName:[%v]", execName)
 	return execName, nil
 }
+func Uint64ToBytes(n uint64) []byte {
+	bytes := make([]byte, 8) // uint64 占用 8 个字节
+	binary.BigEndian.PutUint64(bytes, n)
+	return bytes
+}
 
-// ChunkSize defines the size of each chunk in bytes (32 MiB)
-const ChunkSize = 32 * 1024 * 1024
-
-// Chunk represents a chunk of data in memory
-type Chunk struct {
-	// ID uniquely identifies the chunk
-	ID uint64
-	// Data contains the actual chunk data
-	Data []byte
+func BytesToUint64(bytes []byte) uint64 {
+	return binary.BigEndian.Uint64(bytes)
 }
