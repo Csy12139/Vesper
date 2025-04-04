@@ -6,5 +6,6 @@
     "logLevel": "INFO"
   },
   "mn_network": "tcp",
-  "mn_addr": ":50051"
+  "mn_addr": ":50051",
+  "mn_data_path": "./mn_data"
 }

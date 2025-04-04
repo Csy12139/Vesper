@@ -2,13 +2,16 @@ package MN
 
 import (
 	"fmt"
-	pb "github.com/Csy12139/Vesper/proto"
-	"google.golang.org/grpc"
 	"log"
+	"math/rand"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/Csy12139/Vesper/common"
+	pb "github.com/Csy12139/Vesper/proto"
+	"google.golang.org/grpc"
 )
 
 type MateNode struct {
@@ -20,22 +23,32 @@ type MateNode struct {
 	SDPCandidatesMap map[string]*pb.PutSDPCandidatesRequest
 	grpcServer       *grpc.Server
 	pb.UnimplementedMNServiceServer
-	stop         atomic.Bool
-	dataNodes    map[string]*DataNodeInfo
-	dataNodeLock sync.RWMutex
+	stop           atomic.Bool
+	dataNodes      map[string]*DataNodeInfo
+	dataNodeLock   sync.RWMutex
+	chunkMetaMutex sync.Map
+	kv             *KVTable
 }
 
-func NewMNServer(MNAddr string) (*MateNode, error) {
+func NewMNServer(MNAddr string, dataPath string) (*MateNode, error) {
 	mn := &MateNode{
 		MNNetwork:        "tcp",
 		MNAddr:           MNAddr,
 		SDPCandidatesMap: make(map[string]*pb.PutSDPCandidatesRequest),
+		kv:               NewKVTable(),
+		dataNodes:        make(map[string]*DataNodeInfo),
+		dataNodeLock:     sync.RWMutex{},
+		chunkMetaMutex:   sync.Map{},
 	}
 	mn.stop.Store(true)
+	err := mn.kv.Open(dataPath)
+	if err != nil {
+		return nil, err
+	}
 	return mn, nil
 }
 
-func (mn *MateNode) StartMetaNode() {
+func (mn *MateNode) Start() {
 	mn.stop.Store(false)
 	go func() {
 		lis, err := net.Listen(mn.MNNetwork, mn.MNAddr)
@@ -60,18 +73,19 @@ func (mn *MateNode) IsRunning() bool {
 	return !mn.stop.Load()
 }
 
-func (mn *MateNode) StopMetaNode() {
+func (mn *MateNode) Stop() {
 	mn.stop.Store(true)
 	mn.grpcServer.Stop()
 }
 
 func (mn *MateNode) monitorQueueTimeoutCmd() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
 		if mn.stop.Load() {
 			return
 		}
+		mn.dataNodeLock.RLock()
 		for _, dn := range mn.dataNodes {
 			select {
 			case cmd := <-dn.cmdQueue:
@@ -81,10 +95,10 @@ func (mn *MateNode) monitorQueueTimeoutCmd() {
 					dn.cmdQueue <- cmd
 				}
 			default:
-				break
+				// No commands in queue, continue to next DN
 			}
 		}
-
+		mn.dataNodeLock.RUnlock()
 	}
 }
 func (mn *MateNode) monitorWaitResponseTimeoutCmd() {
@@ -94,6 +108,7 @@ func (mn *MateNode) monitorWaitResponseTimeoutCmd() {
 		if mn.stop.Load() {
 			return
 		}
+		mn.dataNodeLock.RLock()
 		for _, dn := range mn.dataNodes {
 			dn.mutex.Lock()
 			for taskId, cmd := range dn.waitResponseCommand {
@@ -104,5 +119,51 @@ func (mn *MateNode) monitorWaitResponseTimeoutCmd() {
 			}
 			dn.mutex.Unlock()
 		}
+		mn.dataNodeLock.RUnlock()
 	}
+}
+
+func (mn *MateNode) lockChunk(ChunkId uint64) {
+	mu, _ := mn.chunkMetaMutex.LoadOrStore(ChunkId, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+}
+
+func (mn *MateNode) unlockChunk(ChunkId uint64) {
+	mu, ok := mn.chunkMetaMutex.Load(ChunkId)
+	if ok {
+		mu.(*sync.Mutex).Unlock()
+	}
+}
+
+func (mn *MateNode) allocateDn(excludes []string) (string, error) {
+	mn.dataNodeLock.RLock()
+	availableDNs := make([]string, 0, len(mn.dataNodes))
+	for uuid, dn := range mn.dataNodes {
+		// Skip excluded and dead DNs
+		dn.mutex.Lock()
+		defer dn.mutex.Unlock()
+		if dn.state == DEAD {
+			continue
+		}
+		excluded := false
+		for _, exclude := range excludes {
+			if uuid == exclude {
+				excluded = true
+				break
+			}
+		}
+		if excluded {
+			continue
+		}
+		availableDNs = append(availableDNs, uuid)
+	}
+	mn.dataNodeLock.RUnlock()
+
+	if len(availableDNs) == 0 {
+		return "", common.ErrNoAvailableDN
+	}
+
+	// Randomly select one DN
+	selectedIndex := rand.Intn(len(availableDNs))
+	return availableDNs[selectedIndex], nil
 }

@@ -2,10 +2,11 @@ package MNmain
 
 import (
 	"fmt"
-	"github.com/Csy12139/Vesper/MN"
-	"github.com/Csy12139/Vesper/log"
 	"os"
 	"time"
+
+	"github.com/Csy12139/Vesper/MN"
+	"github.com/Csy12139/Vesper/log"
 )
 
 func main() {
@@ -20,14 +21,12 @@ func main() {
 
 	if err := log.InitLog(GlobalConfig.Log.LogDir, GlobalConfig.Log.MaxFileSizeMb, GlobalConfig.Log.MaxFileNum, GlobalConfig.Log.LogLevel); err != nil {
 		log.Fatalf("Failed to initialize log: %v", err)
-		fmt.Printf("Failed to initialize lo"+
-			"g: %v", err)
 	}
-	server, err := MN.NewMNServer(GlobalConfig.MNAddr)
+	server, err := MN.NewMNServer(GlobalConfig.MNAddr, GlobalConfig.MNDataPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	server.StartMetaNode()
+	server.Start()
 	for server.IsRunning() {
 		time.Sleep(10 * time.Second)
 	}

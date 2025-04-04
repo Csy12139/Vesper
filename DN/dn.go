@@ -33,7 +33,7 @@ func NewDataNode(UUID string, MNAddr string, DataPath string) (*DataNode, error)
 	return &dn, nil
 }
 
-func (dn *DataNode) StartDataNode() {
+func (dn *DataNode) Start() {
 	dn.stop.Store(false)
 	go dn.doHeartbeatLoop()
 }
@@ -66,6 +66,6 @@ func (dn *DataNode) IsRunning() bool {
 	return !dn.stop.Load()
 }
 
-func (dn *DataNode) StopMetaNode() {
+func (dn *DataNode) Stop() {
 	dn.stop.Store(true)
 }

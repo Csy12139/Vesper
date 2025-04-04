@@ -1,7 +1,10 @@
 // CommandType represents different types of chunk operations
 package common
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type CommandType int32
 
@@ -82,3 +85,88 @@ type GetSDPCandidatesResponse struct {
 	SDP          string
 	Candidates   []string
 }
+
+
+type AddChunkMetaRequest struct {
+}
+
+type AddChunkMetaResponse struct {
+	ChunkId uint64
+}
+
+type AllocateDnForChunkRequest struct {
+	ChunkId  uint64
+	Excludes []string
+}
+
+type AllocateDnForChunkResponse struct {
+	Uuid string
+	Code error
+}
+
+type AddChunkOnDNRequest struct {
+	SdkUuid string
+	DnUuid  string
+}
+
+type AddChunkOnDNResponse struct {
+	Code error
+}
+
+type CompleteAddChunkOnDNRequest struct {
+	ChunkId uint64
+	Uuid    string
+}
+
+type CompleteAddChunkOnDNResponse struct {
+	Code error
+}
+
+type CompleteAddChunkMetaRequest struct {
+	ChunkID uint64
+}
+
+type CompleteAddChunkMetaResponse struct {
+}
+
+type GetChunkMetaRequest struct {
+	ChunkID uint64
+}
+
+type GetChunkMetaResponse struct {
+	Meta *ChunkMeta
+	Code error
+}
+
+
+
+type ChunkState int
+
+const (
+	ChunkState_CREATING ChunkState = 0
+	ChunkState_CREATED  ChunkState = 1
+)
+
+// ChunkSize defines the size of each chunk in bytes (32 MiB)
+const ChunkSize = 32 * 1024 * 1024
+
+// Chunk represents a chunk of data in memory
+type Chunk struct {
+	// ID uniquely identifies the chunk
+	ID uint64
+	// Data contains the actual chunk data
+	Data []byte
+}
+
+type ChunkMeta struct {
+	ID      uint64
+	State   ChunkState
+	DnUuids map[string]struct{}
+}
+
+var (
+	ErrChunkNotFound = errors.New("chunk not found")
+	ErrNoAvailableDN = errors.New("no available data node")
+	ErrCommitDNTimeout = errors.New("commit dn timeout")
+	ErrDNNotFound = errors.New("data node not found")
+)
