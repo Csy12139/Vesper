@@ -2,8 +2,8 @@ package common
 
 import (
 	"errors"
-	pb "github.com/Csy12139/Vesper/proto"
 	"fmt"
+	pb "github.com/Csy12139/Vesper/proto"
 )
 
 // Proto2Command converts a protobuf Command to internal format
@@ -163,22 +163,14 @@ func GetSDPCandidatesRequest2Proto(req *GetSDPCandidatesRequest) *pb.GetSDPCandi
 }
 func Proto2GetSDPCandidatesResponse(pbResp *pb.GetSDPCandidatesResponse) *GetSDPCandidatesResponse {
 	return &GetSDPCandidatesResponse{
-		Success:      pbResp.Success,
-		ErrorMessage: pbResp.ErrorMessage,
-		SourceUUID:   pbResp.SourceUuid,
-		TargetUUID:   pbResp.TargetUuid,
-		SDP:          pbResp.Sdp,
-		Candidates:   pbResp.Candidates,
+		SDP:        pbResp.Sdp,
+		Candidates: pbResp.Candidates,
 	}
 }
 func GetSDPCandidatesResponse2Proto(resp *GetSDPCandidatesResponse) *pb.GetSDPCandidatesResponse {
 	return &pb.GetSDPCandidatesResponse{
-		Success:      resp.Success,
-		ErrorMessage: resp.ErrorMessage,
-		SourceUuid:   resp.SourceUUID,
-		TargetUuid:   resp.TargetUUID,
-		Sdp:          resp.SDP,
-		Candidates:   resp.Candidates,
+		Sdp:        resp.SDP,
+		Candidates: resp.Candidates,
 	}
 }
 
@@ -218,8 +210,6 @@ func Proto2ChunkMeta(protoMeta *pb.ChunkMeta) *ChunkMeta {
 	return meta
 }
 
-
-
 func Error2Proto(err error) pb.ErrorCode {
 	if err == nil {
 		return pb.ErrorCode_OK
@@ -233,6 +223,8 @@ func Error2Proto(err error) pb.ErrorCode {
 		return pb.ErrorCode_COMMIT_DN_CMD_TIMEOUT
 	case errors.Is(err, ErrDNNotFound):
 		return pb.ErrorCode_DN_NOT_FOUND
+	case errors.Is(err, ErrSDPNotFound):
+		return pb.ErrorCode_SDP_NOT_FOUND
 	default:
 		return pb.ErrorCode_UNKNOWN
 	}
@@ -240,7 +232,7 @@ func Error2Proto(err error) pb.ErrorCode {
 
 func Proto2Error(code pb.ErrorCode) error {
 	switch code {
-		case pb.ErrorCode_OK:
+	case pb.ErrorCode_OK:
 		return nil
 	case pb.ErrorCode_CHUNK_NOT_FOUND:
 		return ErrChunkNotFound
@@ -250,6 +242,8 @@ func Proto2Error(code pb.ErrorCode) error {
 		return ErrCommitDNTimeout
 	case pb.ErrorCode_DN_NOT_FOUND:
 		return ErrDNNotFound
+	case pb.ErrorCode_SDP_NOT_FOUND:
+		return ErrSDPNotFound
 	default:
 		return fmt.Errorf("unknown error code: %v", code)
 	}
@@ -257,158 +251,152 @@ func Proto2Error(code pb.ErrorCode) error {
 
 // AddChunkMeta conversions
 func Proto2AddChunkMetaRequest(pbReq *pb.AddChunkMetaRequest) *AddChunkMetaRequest {
-    return &AddChunkMetaRequest{}
+	return &AddChunkMetaRequest{}
 }
 
 func AddChunkMetaRequest2Proto(req *AddChunkMetaRequest) *pb.AddChunkMetaRequest {
-    return &pb.AddChunkMetaRequest{}
+	return &pb.AddChunkMetaRequest{}
 }
 
 func Proto2AddChunkMetaResponse(pbResp *pb.AddChunkMetaResponse) *AddChunkMetaResponse {
-    return &AddChunkMetaResponse{
-        ChunkId: pbResp.ChunkId,
-    }
+	return &AddChunkMetaResponse{
+		ChunkId: pbResp.ChunkId,
+	}
 }
 
 func AddChunkMetaResponse2Proto(resp *AddChunkMetaResponse) *pb.AddChunkMetaResponse {
-    return &pb.AddChunkMetaResponse{
-        ChunkId: resp.ChunkId,
-    }
+	return &pb.AddChunkMetaResponse{
+		ChunkId: resp.ChunkId,
+	}
 }
 
 // CompleteAddChunkMeta conversions
 func Proto2CompleteAddChunkMetaRequest(pbReq *pb.CompleteAddChunkMetaRequest) *CompleteAddChunkMetaRequest {
-    return &CompleteAddChunkMetaRequest{
-        ChunkID: pbReq.ChunkId,
-    }
+	return &CompleteAddChunkMetaRequest{
+		ChunkID: pbReq.ChunkId,
+	}
 }
 
 func CompleteAddChunkMetaRequest2Proto(req *CompleteAddChunkMetaRequest) *pb.CompleteAddChunkMetaRequest {
-    return &pb.CompleteAddChunkMetaRequest{
-        ChunkId: req.ChunkID,
-    }
+	return &pb.CompleteAddChunkMetaRequest{
+		ChunkId: req.ChunkID,
+	}
 }
 
 func Proto2CompleteAddChunkMetaResponse(pbResp *pb.CompleteAddChunkMetaResponse) *CompleteAddChunkMetaResponse {
-    return &CompleteAddChunkMetaResponse{}
+	return &CompleteAddChunkMetaResponse{}
 }
 
 func CompleteAddChunkMetaResponse2Proto(resp *CompleteAddChunkMetaResponse) *pb.CompleteAddChunkMetaResponse {
-    return &pb.CompleteAddChunkMetaResponse{}
+	return &pb.CompleteAddChunkMetaResponse{}
 }
 
 // GetChunkMeta conversions
 func Proto2GetChunkMetaRequest(pbReq *pb.GetChunkMetaRequest) *GetChunkMetaRequest {
-    return &GetChunkMetaRequest{
-        ChunkID: pbReq.ChunkId,
-    }
+	return &GetChunkMetaRequest{
+		ChunkID: pbReq.ChunkId,
+	}
 }
 
 func GetChunkMetaRequest2Proto(req *GetChunkMetaRequest) *pb.GetChunkMetaRequest {
-    return &pb.GetChunkMetaRequest{
-        ChunkId: req.ChunkID,
-    }
+	return &pb.GetChunkMetaRequest{
+		ChunkId: req.ChunkID,
+	}
 }
 
 func Proto2GetChunkMetaResponse(pbResp *pb.GetChunkMetaResponse) *GetChunkMetaResponse {
-    return &GetChunkMetaResponse{
-        Meta: Proto2ChunkMeta(pbResp.Meta),
-        Code: Proto2Error(pbResp.Code),
-    }
+	return &GetChunkMetaResponse{
+		Meta: Proto2ChunkMeta(pbResp.Meta),
+		Code: Proto2Error(pbResp.Code),
+	}
 }
 
 func GetChunkMetaResponse2Proto(resp *GetChunkMetaResponse) *pb.GetChunkMetaResponse {
-    return &pb.GetChunkMetaResponse{
-        Meta: ChunkMeta2Proto(resp.Meta),
-        Code: Error2Proto(resp.Code),
-    }
+	return &pb.GetChunkMetaResponse{
+		Meta: ChunkMeta2Proto(resp.Meta),
+		Code: Error2Proto(resp.Code),
+	}
 }
 
 // AllocateDnForChunk conversions
 func Proto2AllocateDnForChunkRequest(pbReq *pb.AllocateDnForChunkRequest) *AllocateDnForChunkRequest {
-    return &AllocateDnForChunkRequest{
-        ChunkId: pbReq.ChunkId,
-        Excludes: pbReq.Excludes,
-    }
+	return &AllocateDnForChunkRequest{
+		ChunkId:  pbReq.ChunkId,
+		Excludes: pbReq.Excludes,
+	}
 }
 
 func AllocateDnForChunkRequest2Proto(req *AllocateDnForChunkRequest) *pb.AllocateDnForChunkRequest {
-    return &pb.AllocateDnForChunkRequest{
-        ChunkId: req.ChunkId,
-        Excludes: req.Excludes,
-    }
+	return &pb.AllocateDnForChunkRequest{
+		ChunkId:  req.ChunkId,
+		Excludes: req.Excludes,
+	}
 }
 
 func Proto2AllocateDnForChunkResponse(pbResp *pb.AllocateDnForChunkResponse) *AllocateDnForChunkResponse {
-    return &AllocateDnForChunkResponse{
-        Uuid: pbResp.Uuid,
-        Code: Proto2Error(pbResp.Code),
-    }
+	return &AllocateDnForChunkResponse{
+		Uuid: pbResp.Uuid,
+		Code: Proto2Error(pbResp.Code),
+	}
 }
 
 func AllocateDnForChunkResponse2Proto(resp *AllocateDnForChunkResponse) *pb.AllocateDnForChunkResponse {
-    return &pb.AllocateDnForChunkResponse{
-        Uuid: resp.Uuid,
-        Code: Error2Proto(resp.Code),
-    }
+	return &pb.AllocateDnForChunkResponse{
+		Uuid: resp.Uuid,
+		Code: Error2Proto(resp.Code),
+	}
 }
 
 // AddChunkOnDN conversions
 func Proto2AddChunkOnDNRequest(pbReq *pb.AddChunkOnDNRequest) *AddChunkOnDNRequest {
-    return &AddChunkOnDNRequest{
-        SdkUuid: pbReq.SdkUuid,
-        DnUuid:  pbReq.DnUuid,
-    }
+	return &AddChunkOnDNRequest{
+		SdkUuid: pbReq.SdkUuid,
+		DnUuid:  pbReq.DnUuid,
+	}
 }
 
 func AddChunkOnDNRequest2Proto(req *AddChunkOnDNRequest) *pb.AddChunkOnDNRequest {
-    return &pb.AddChunkOnDNRequest{
-        SdkUuid: req.SdkUuid,
-        DnUuid:  req.DnUuid,
-    }
+	return &pb.AddChunkOnDNRequest{
+		SdkUuid: req.SdkUuid,
+		DnUuid:  req.DnUuid,
+	}
 }
 
 func Proto2AddChunkOnDNResponse(pbResp *pb.AddChunkOnDNResponse) *AddChunkOnDNResponse {
-    return &AddChunkOnDNResponse{
-        Code: Proto2Error(pbResp.Code),
-    }
+	return &AddChunkOnDNResponse{
+		Code: Proto2Error(pbResp.Code),
+	}
 }
 
 func AddChunkOnDNResponse2Proto(resp *AddChunkOnDNResponse) *pb.AddChunkOnDNResponse {
-    return &pb.AddChunkOnDNResponse{
-        Code: Error2Proto(resp.Code),
-    }
+	return &pb.AddChunkOnDNResponse{
+		Code: Error2Proto(resp.Code),
+	}
 }
 
 // CompleteAddChunkOnDN conversions
 func Proto2CompleteAddChunkOnDNRequest(pbReq *pb.CompleteAddChunkOnDNRequest) *CompleteAddChunkOnDNRequest {
-    return &CompleteAddChunkOnDNRequest{
-        ChunkId: pbReq.ChunkId,
-        Uuid:    pbReq.Uuid,
-    }
+	return &CompleteAddChunkOnDNRequest{
+		ChunkId: pbReq.ChunkId,
+		Uuid:    pbReq.Uuid,
+	}
 }
 
 func CompleteAddChunkOnDNRequest2Proto(req *CompleteAddChunkOnDNRequest) *pb.CompleteAddChunkOnDNRequest {
-    return &pb.CompleteAddChunkOnDNRequest{
-        ChunkId: req.ChunkId,
-        Uuid:    req.Uuid,
-    }
+	return &pb.CompleteAddChunkOnDNRequest{
+		ChunkId: req.ChunkId,
+		Uuid:    req.Uuid,
+	}
 }
 
 func Proto2CompleteAddChunkOnDNResponse(pbResp *pb.CompleteAddChunkOnDNResponse) *CompleteAddChunkOnDNResponse {
-    return &CompleteAddChunkOnDNResponse{
-        Code: Proto2Error(pbResp.Code),
-    }
+	return &CompleteAddChunkOnDNResponse{
+		Code: Proto2Error(pbResp.Code),
+	}
 }
 
 func CompleteAddChunkOnDNResponse2Proto(resp *CompleteAddChunkOnDNResponse) *pb.CompleteAddChunkOnDNResponse {
-    return &pb.CompleteAddChunkOnDNResponse{
-        Code: Error2Proto(resp.Code),
-    }
+	return &pb.CompleteAddChunkOnDNResponse{
+		Code: Error2Proto(resp.Code),
+	}
 }
-
-
-
-
-
-

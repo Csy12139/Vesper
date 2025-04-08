@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"fmt"
 	"github.com/Csy12139/Vesper/log"
 	"github.com/pion/webrtc/v4"
@@ -19,8 +20,6 @@ type P2PConnection struct {
 	candidates     []webrtc.ICECandidateInit
 	candidatesLock sync.Mutex
 	gatherDone     chan struct{}
-
-	SDPCandidatesExchangeTimeout time.Duration
 }
 
 func NewP2PConnection() (*P2PConnection, error) {
@@ -120,12 +119,15 @@ func (p *P2PConnection) IsConnection() bool {
 	//return (p.conn.ICEConnectionState() == webrtc.ICEConnectionStateConnected) && (p.dataCh.ReadyState() == webrtc.DataChannelStateOpen)
 }
 
-func (p *P2PConnection) WaitConnection(timeout time.Duration) error {
-	timeoutCh := time.After(timeout)
+func (p *P2PConnection) CloseConnection() error {
+	return p.conn.GracefulClose()
+}
+
+func (p *P2PConnection) WaitConnection(ctx context.Context) error {
 	for !p.IsConnection() {
 		select {
-		case <-timeoutCh:
-			return fmt.Errorf("wait connection timed out after %v", timeout)
+		case <-ctx.Done():
+			return ctx.Err()
 		default:
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -133,20 +135,29 @@ func (p *P2PConnection) WaitConnection(timeout time.Duration) error {
 	return nil
 }
 
-func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duration) error {
+func (p *P2PConnection) SendDate(label string, data []byte, ctx context.Context) error {
+	if ctx.Err() != nil {
+		return fmt.Errorf("sendDate failed: %v", ctx.Err())
+	}
+
 	ch, err := p.conn.CreateDataChannel(label, nil)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := ch.GracefulClose(); err != nil {
+			log.Errorf("Error closing DataChannel %s: %v", ch.Label(), err)
+		}
+	}()
+
 	ch.OnClose(func() {
 		log.Info("DataChannel closed:", ch.Label())
 	})
 	// Wait DataChannel Open
-	timeoutChan := time.After(timeout)
 	for !(ch.ReadyState() == webrtc.DataChannelStateOpen) {
 		select {
-		case <-timeoutChan:
-			return fmt.Errorf("wait connection timed out after %v", timeout)
+		case <-ctx.Done():
+			return fmt.Errorf("wait dataChannel open failed: %v", ctx.Err())
 		default:
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -169,7 +180,6 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 
 		if err := ch.Send(chunk); err != nil {
 			log.Errorf("Send chunk %d-%d failed: %v", offset, end, err)
-			ch.Close()
 			return
 		}
 		log.Infof("Sent chunk %d-%d bytes", offset, end)
@@ -185,15 +195,13 @@ func (p *P2PConnection) SendDate(label string, data []byte, timeout time.Duratio
 	// Wait data send over and wait buffer decrease to zero
 	for ch.BufferedAmount() > 0 || end < dataLen {
 		select {
-		case <-timeoutChan:
-			ch.Close()
-			return fmt.Errorf("wait buffer clear timed out after %v", timeout)
+		case <-ctx.Done():
+			return fmt.Errorf("wait buffer clear failed: %v", ctx.Err())
 		default:
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
 	log.Infof("All data sent.")
-	ch.Close()
 	return nil
 }
 

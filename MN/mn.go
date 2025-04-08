@@ -2,16 +2,16 @@ package MN
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/Csy12139/Vesper/common"
+	"github.com/Csy12139/Vesper/log"
+	pb "github.com/Csy12139/Vesper/proto"
+	"google.golang.org/grpc"
 	"math/rand"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/Csy12139/Vesper/common"
-	pb "github.com/Csy12139/Vesper/proto"
-	"google.golang.org/grpc"
 )
 
 type MateNode struct {
@@ -20,7 +20,7 @@ type MateNode struct {
 	mu        sync.RWMutex
 	// TODO change to map[string][string]
 	// TODO add timestamp
-	SDPCandidatesMap map[string]*pb.PutSDPCandidatesRequest
+	SDPCandidatesMap map[string]*common.SDPAndCandidates
 	grpcServer       *grpc.Server
 	pb.UnimplementedMNServiceServer
 	stop           atomic.Bool
@@ -34,7 +34,7 @@ func NewMNServer(MNAddr string, dataPath string) (*MateNode, error) {
 	mn := &MateNode{
 		MNNetwork:        "tcp",
 		MNAddr:           MNAddr,
-		SDPCandidatesMap: make(map[string]*pb.PutSDPCandidatesRequest),
+		SDPCandidatesMap: make(map[string]*common.SDPAndCandidates),
 		kv:               NewKVTable(),
 		dataNodes:        make(map[string]*DataNodeInfo),
 		dataNodeLock:     sync.RWMutex{},
@@ -57,7 +57,7 @@ func (mn *MateNode) Start() {
 		}
 		mn.grpcServer = grpc.NewServer()
 		pb.RegisterMNServiceServer(mn.grpcServer, mn)
-		log.Printf("Server listening at %v", lis.Addr())
+		log.Infof("Server listening at %v", lis.Addr())
 		if err := mn.grpcServer.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}
@@ -79,7 +79,7 @@ func (mn *MateNode) Stop() {
 }
 
 func (mn *MateNode) monitorQueueTimeoutCmd() {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
 		if mn.stop.Load() {
@@ -90,8 +90,10 @@ func (mn *MateNode) monitorQueueTimeoutCmd() {
 			select {
 			case cmd := <-dn.cmdQueue:
 				if time.Since(cmd.StartTimestamp) > cmd.Timeout {
+					log.Infof("dn [%v] command [%v] timeout", dn.UUID, cmd)
 					go cmd.CallBack(cmd.ID, fmt.Errorf("cmd queue timeout!start time:%v,timeout:%v", cmd.StartTimestamp, cmd.Timeout))
 				} else {
+					log.Debugf("command [%v] not timeout, push to cmdQueue tail", cmd.ID)
 					dn.cmdQueue <- cmd
 				}
 			default:
@@ -113,7 +115,7 @@ func (mn *MateNode) monitorWaitResponseTimeoutCmd() {
 			dn.mutex.Lock()
 			for taskId, cmd := range dn.waitResponseCommand {
 				if time.Since(cmd.StartTimestamp) > cmd.Timeout {
-					go cmd.CallBack(cmd.ID, fmt.Errorf("cmd wait response timeout!start time:%v,timeout:%v", cmd.StartTimestamp, cmd.Timeout))
+					go cmd.CallBack(cmd.ID, fmt.Errorf("cmd [%d] wait response timeout!start time:%v,timeout:%v", cmd.ID, cmd.StartTimestamp, cmd.Timeout))
 					delete(dn.waitResponseCommand, taskId) // go 可以一边遍历一边删除
 				}
 			}

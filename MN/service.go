@@ -13,8 +13,13 @@ import (
 
 func (mn *MateNode) PutSDPCandidates(ctx context.Context, req *pb.PutSDPCandidatesRequest) (*pb.PutSDPCandidatesResponse, error) {
 	key := req.SourceUuid + "|" + req.TargetUuid
+	s := &common.SDPAndCandidates{
+		SDP:                 req.Sdp,
+		Candidates:          req.Candidates,
+		LastUpdateTimestamp: time.Now(),
+	}
 	mn.mu.Lock()
-	mn.SDPCandidatesMap[key] = req
+	mn.SDPCandidatesMap[key] = s
 	mn.mu.Unlock()
 	return &pb.PutSDPCandidatesResponse{
 		Success:      true,
@@ -30,15 +35,19 @@ func (mn *MateNode) GetSDPCandidates(ctx context.Context, req *pb.GetSDPCandidat
 	mn.mu.RUnlock()
 
 	if !ok {
-		return nil, fmt.Errorf("SDPCandidates not found")
+		return &pb.GetSDPCandidatesResponse{
+			Code: pb.ErrorCode_SDP_NOT_FOUND,
+		}, nil
 	}
+	if time.Since(SDPCandidates.LastUpdateTimestamp) > 5*time.Minute {
+		return &pb.GetSDPCandidatesResponse{
+			Code: pb.ErrorCode_SDP_NOT_FOUND,
+		}, nil
+	}
+
 	return &pb.GetSDPCandidatesResponse{
-		Success:      true,
-		ErrorMessage: "",
-		SourceUuid:   req.SourceUuid,
-		TargetUuid:   req.TargetUuid,
-		Sdp:          SDPCandidates.Sdp,
-		Candidates:   SDPCandidates.Candidates,
+		Sdp:        SDPCandidates.SDP,
+		Candidates: SDPCandidates.Candidates,
 	}, nil
 }
 
@@ -50,7 +59,7 @@ func (mn *MateNode) DoHeartbeat(ctx context.Context, req *pb.HeartbeatRequest) (
 	mn.dataNodeLock.RUnlock()
 	if !exist {
 		log.Infof("receive first heartbeat from data node [%s], now join it", request.UUID)
-		dn = NewDataNodeInfo()
+		dn = NewDataNodeInfo(request.UUID)
 		dn.SetALIVE()
 		mn.dataNodeLock.Lock()
 		defer mn.dataNodeLock.Unlock()
@@ -70,6 +79,7 @@ func (mn *MateNode) DoHeartbeat(ctx context.Context, req *pb.HeartbeatRequest) (
 				request.UUID, cmdResult.CommandID)
 			continue
 		}
+		log.Infof("receive cmd id [%v] result [%+v]", cmd.ID, cmdResult)
 		if cmdResult.Success {
 			go cmd.CallBack(cmd.ID, nil)
 		} else {
@@ -80,9 +90,12 @@ func (mn *MateNode) DoHeartbeat(ctx context.Context, req *pb.HeartbeatRequest) (
 		Commands: make([]*common.Command, 0),
 	}
 	// TODO:limit cmd number
+	log.Debugf("heartbeat commandQueue addr [%v] of [%v],queue size [%v]", dn.cmdQueue, dn.UUID, len(dn.cmdQueue))
+
 	for {
 		select {
 		case cmd := <-dn.cmdQueue:
+			log.Infof("heartbeat append cmd [%d] to dn [%v], push it to waitResponseCommand", cmd.ID, request.UUID)
 			response.Commands = append(response.Commands, cmd)
 			dn.waitResponseCommand[cmd.ID] = cmd
 		default:
@@ -162,6 +175,7 @@ func (mn *MateNode) AllocateDnForChunk(ctx context.Context, req *pb.AllocateDnFo
 }
 
 func (mn *MateNode) AddChunkOnDN(ctx context.Context, req *pb.AddChunkOnDNRequest) (*pb.AddChunkOnDNResponse, error) {
+	log.Debug("start add chunk on dn")
 	mn.dataNodeLock.RLock()
 	dn, exist := mn.dataNodes[req.DnUuid]
 	mn.dataNodeLock.RUnlock()
@@ -172,18 +186,20 @@ func (mn *MateNode) AddChunkOnDN(ctx context.Context, req *pb.AddChunkOnDNReques
 	}
 	dn.mutex.Lock()
 	defer dn.mutex.Unlock()
-
-	done := make(chan error, 1)
-	dn.SubmitAddChunkCmd(req.SdkUuid, 5*time.Second, func(cmdId uint64, err error) {
-		done <- err
+	//done := make(chan error, 1)
+	dn.SubmitAddChunkCmd(req.SdkUuid, 7*time.Second, func(cmdId uint64, err error) {
+		//done <- err
+		if err != nil {
+			log.Errorf("add chunk cmd [%d] faild error [%v]", cmdId, err)
+		}
+		log.Infof("add chunk cmd [%d] success", cmdId)
 	})
-
-	if err := <-done; err != nil {
-		log.Errorf("Failed to add chunk on DN %s: %v", req.DnUuid, err)
-		return &pb.AddChunkOnDNResponse{
-			Code: pb.ErrorCode_COMMIT_DN_CMD_TIMEOUT,
-		}, nil
-	}
+	//if err := <-done; err != nil {
+	//	log.Errorf("Failed to add chunk on DN %s: %v", req.DnUuid, err)
+	//	return &pb.AddChunkOnDNResponse{
+	//		Code: pb.ErrorCode_COMMIT_DN_CMD_TIMEOUT,
+	//	}, nil
+	//}
 	return &pb.AddChunkOnDNResponse{
 		Code: pb.ErrorCode_OK,
 	}, nil

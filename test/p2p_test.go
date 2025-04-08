@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"github.com/Csy12139/Vesper/log"
 	"github.com/Csy12139/Vesper/p2p"
 	"os"
@@ -55,6 +56,9 @@ func ReadFile(sdpPath string, CandidatesPath string) (string, []string, error) {
 }
 
 func Sender(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	pc, err := p2p.NewP2PConnection()
 	if err != nil {
 		t.Fatal("[Sender]NewP2PConnection failed: " + err.Error())
@@ -77,23 +81,27 @@ func Sender(t *testing.T) {
 	if err != nil {
 		t.Fatal("[Sender]SetRemotedDescription failed: " + err.Error())
 	}
-	err = pc.WaitConnection(time.Minute)
+	err = pc.WaitConnection(ctx)
 	if err != nil {
 		t.Fatal("[Sender]WaitConnection failed: " + err.Error())
 	}
+	// TODO:同时Send
 	data := make([]byte, DataSize)
-	err = pc.SendDate("test", data, time.Minute)
+	err = pc.SendDate("test", data, ctx)
 	if err != nil {
 		t.Fatal("[Sender]SendDate failed: " + err.Error())
 	}
 	//data = bytes.Repeat([]byte{1}, DataSize)
-	err = pc.SendDate("another", data, time.Minute)
+	err = pc.SendDate("another", data, ctx)
 	if err != nil {
 		t.Fatal("[Sender]SendDate failed: " + err.Error())
 	}
 }
 
 func Receiver(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	pc, err := p2p.NewP2PConnection()
 	if err != nil {
 		t.Fatal("[Receiver]NewP2PConnection failed: " + err.Error())
@@ -112,7 +120,7 @@ func Receiver(t *testing.T) {
 		t.Fatal("[Receiver]WriteFile failed: " + err.Error())
 	}
 	answerReady <- true
-	err = pc.WaitConnection(time.Minute)
+	err = pc.WaitConnection(ctx)
 	if err != nil {
 		t.Fatal("[Receiver]WaitConnection failed: " + err.Error())
 	}

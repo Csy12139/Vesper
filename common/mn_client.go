@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const mnClientTimeout = 5 * time.Second
+const mnClientTimeout = 10 * time.Second
 
 type MNClient struct {
 	addr   string
@@ -47,117 +47,135 @@ func (c *MNClient) DoHeartbeat(uuid string, results []CommandResult) (*Heartbeat
 	return Proto2HeartbeatResponse(pbResp), nil
 }
 
-func (c *MNClient) PutSDPCandidates(req *PutSDPCandidatesRequest) (*PutSDPCandidatesResponse, error) {
+func (c *MNClient) PutSDPCandidates(SourceUUID string, TargetUUID string, SDP string, Candidates []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
-
-	pbReq := PutSDPCandidatesRequest2Proto(req)
-	pbResp, err := c.client.PutSDPCandidates(ctx, pbReq)
-	if err != nil {
-		return nil, fmt.Errorf("put sdp and candidates RPC failed: %w", err)
+	req := &pb.PutSDPCandidatesRequest{
+		SourceUuid: SourceUUID,
+		TargetUuid: TargetUUID,
+		Sdp:        SDP,
+		Candidates: Candidates,
 	}
-	return Proto2PutSDPCandidatesResponse(pbResp), nil
+	_, err := c.client.PutSDPCandidates(ctx, req)
+	return err
 }
 
-func (c *MNClient) GetSDPCandidates(req *GetSDPCandidatesRequest) (*GetSDPCandidatesResponse, error) {
+func (c *MNClient) GetSDPCandidates(SourceUUID string, TargetUUID string) (SDP string, Candidates []string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
-
-	pbReq := GetSDPCandidatesRequest2Proto(req)
-	pbResp, err := c.client.GetSDPCandidates(ctx, pbReq)
-	if err != nil {
-		return nil, fmt.Errorf("get sdp and candidates RPC failed: %w", err)
+	req := &pb.GetSDPCandidatesRequest{
+		SourceUuid: SourceUUID,
+		TargetUuid: TargetUUID,
 	}
-	return Proto2GetSDPCandidatesResponse(pbResp), nil
+	pbResp, err := c.client.GetSDPCandidates(ctx, req)
+	if err != nil {
+		return "", nil, fmt.Errorf("[Technical Error]get sdp and candidates failed [%w]", err)
+	}
+
+	err = Proto2Error(pbResp.Code)
+	if err != nil {
+		return "", nil, err
+	}
+	return pbResp.Sdp, pbResp.Candidates, nil
 }
 
-
-func (c *MNClient) AddChunkMeta() (*AddChunkMetaResponse, error) {
+func (c *MNClient) AddChunkMeta() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	pbReq := AddChunkMetaRequest2Proto(&AddChunkMetaRequest{})
-	pbResp, err := c.client.AddChunkMeta(ctx, pbReq)
+	pbResp, err := c.client.AddChunkMeta(ctx, &pb.AddChunkMetaRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("add chunk meta RPC failed: %w", err)
+		return 0, fmt.Errorf("add chunk meta failed: %w", err)
 	}
-	return Proto2AddChunkMetaResponse(pbResp), nil
+	return pbResp.ChunkId, nil
 }
 
-func (c *MNClient) CompleteAddChunkMeta(chunkId uint64) (*CompleteAddChunkMetaResponse, error) {
+func (c *MNClient) CompleteAddChunkMeta(chunkId uint64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	req := &CompleteAddChunkMetaRequest{
-		ChunkID: chunkId,
+	req := &pb.CompleteAddChunkMetaRequest{
+		ChunkId: chunkId,
 	}
-	pbReq := CompleteAddChunkMetaRequest2Proto(req)
-	pbResp, err := c.client.CompleteAddChunkMeta(ctx, pbReq)
+	_, err := c.client.CompleteAddChunkMeta(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("complete add chunk meta RPC failed: %w", err)
+		return fmt.Errorf("complete add chunk meta failed: %w", err)
 	}
-	return Proto2CompleteAddChunkMetaResponse(pbResp), nil
+	return nil
 }
 
-func (c *MNClient) GetChunkMeta(chunkId uint64) (*GetChunkMetaResponse, error) {
+func (c *MNClient) GetChunkMeta(chunkId uint64) (*ChunkMeta, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	req := &GetChunkMetaRequest{
-		ChunkID: chunkId,
+	req := &pb.GetChunkMetaRequest{
+		ChunkId: chunkId,
 	}
-	pbReq := GetChunkMetaRequest2Proto(req)
-	pbResp, err := c.client.GetChunkMeta(ctx, pbReq)
+	pbResp, err := c.client.GetChunkMeta(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("get chunk meta RPC failed: %w", err)
+		return nil, fmt.Errorf("get chunk meta failed: %w", err)
 	}
-	return Proto2GetChunkMetaResponse(pbResp), nil
+	err = Proto2Error(pbResp.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	return Proto2ChunkMeta(pbResp.Meta), nil
 }
 
-func (c *MNClient) AllocateDnForChunk(chunkId uint64, excludes []string) (*AllocateDnForChunkResponse, error) {
+func (c *MNClient) AllocateDnForChunk(chunkId uint64, excludes []string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	req := &AllocateDnForChunkRequest{
+	req := &pb.AllocateDnForChunkRequest{
 		ChunkId:  chunkId,
 		Excludes: excludes,
 	}
-	pbReq := AllocateDnForChunkRequest2Proto(req)
-	pbResp, err := c.client.AllocateDnForChunk(ctx, pbReq)
+	pbResp, err := c.client.AllocateDnForChunk(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("allocate dn for chunk RPC failed: %w", err)
+		return "", fmt.Errorf("allocate dn for chunk failed: %w", err)
 	}
-	return Proto2AllocateDnForChunkResponse(pbResp), nil
+	err = Proto2Error(pbResp.Code)
+	if err != nil {
+		return "", err
+	}
+	return pbResp.Uuid, nil
 }
 
-func (c *MNClient) AddChunkOnDN(sdkUuid string, dnUuid string) (*AddChunkOnDNResponse, error) {
+func (c *MNClient) AddChunkOnDN(sdkUuid string, dnUuid string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	req := &AddChunkOnDNRequest{
+	req := &pb.AddChunkOnDNRequest{
 		SdkUuid: sdkUuid,
 		DnUuid:  dnUuid,
 	}
-	pbReq := AddChunkOnDNRequest2Proto(req)
-	pbResp, err := c.client.AddChunkOnDN(ctx, pbReq)
+	pbResp, err := c.client.AddChunkOnDN(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("add chunk on dn RPC failed: %w", err)
+		return fmt.Errorf("[Technical Error] add chunk on dn %v failed: %w", req.DnUuid, err)
 	}
-	return Proto2AddChunkOnDNResponse(pbResp), nil
+	err = Proto2Error(pbResp.Code)
+	if err != nil {
+		return fmt.Errorf("[Business Error] add chunk on dn failed: %w", err)
+	}
+	return nil
 }
 
-func (c *MNClient) CompleteAddChunkOnDN(chunkId uint64, uuid string) (*CompleteAddChunkOnDNResponse, error) {
+func (c *MNClient) CompleteAddChunkOnDN(chunkId uint64, uuid string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	req := &CompleteAddChunkOnDNRequest{
+	req := &pb.CompleteAddChunkOnDNRequest{
 		ChunkId: chunkId,
 		Uuid:    uuid,
 	}
-	pbReq := CompleteAddChunkOnDNRequest2Proto(req)
-	pbResp, err := c.client.CompleteAddChunkOnDN(ctx, pbReq)
+	pbResp, err := c.client.CompleteAddChunkOnDN(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("complete add chunk on dn RPC failed: %w", err)
+		return fmt.Errorf("complete add chunk on dn failed: %w", err)
 	}
-	return Proto2CompleteAddChunkOnDNResponse(pbResp), nil
+	err = Proto2Error(pbResp.Code)
+	if err != nil {
+		return err
+	}
+	return nil
 }

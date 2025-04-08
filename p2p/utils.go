@@ -60,28 +60,3 @@ func decodeCandidates(jsonCandidates []string) ([]webrtc.ICECandidateInit, error
 	}
 	return candidates, nil
 }
-
-//func put(req *common.PutSDPCandidatesRequest) {
-//	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
-//	if err != nil {
-//		log.Fatalf("Failed to create MN client: %v", err)
-//	}
-//	resp, err := mnClient.PutSDPCandidates(req)
-//	if err != nil {
-//		log.Errorf("PutSDPCandidates failed: %v", err)
-//	}
-//	log.Infof("PutSDPCandidates: %v", resp)
-//}
-//
-//func get(req *common.GetSDPCandidatesRequest) (string, []string) {
-//	mnClient, err := common.NewMNClient(GlobalConfig.MNAddr)
-//	if err != nil {
-//		log.Fatalf("Failed to create MN client: %v", err)
-//	}
-//	resp, err := mnClient.GetSDPCandidates(req)
-//	if err != nil {
-//		log.Errorf("GetSenderSDPCandidates failed: %v", err)
-//	}
-//	log.Infof("GetSenderSDPCandidates: %v", resp)
-//	return resp.SDP, resp.Candidates
-//}

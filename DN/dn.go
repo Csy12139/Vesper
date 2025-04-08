@@ -39,7 +39,7 @@ func (dn *DataNode) Start() {
 }
 
 func (dn *DataNode) doHeartbeatLoop() {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
 	results := make([]common.CommandResult, 0)

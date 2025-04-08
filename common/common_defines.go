@@ -86,7 +86,6 @@ type GetSDPCandidatesResponse struct {
 	Candidates   []string
 }
 
-
 type AddChunkMetaRequest struct {
 }
 
@@ -137,8 +136,11 @@ type GetChunkMetaResponse struct {
 	Meta *ChunkMeta
 	Code error
 }
-
-
+type SDPAndCandidates struct {
+	SDP                 string
+	Candidates          []string
+	LastUpdateTimestamp time.Time
+}
 
 type ChunkState int
 
@@ -165,8 +167,9 @@ type ChunkMeta struct {
 }
 
 var (
-	ErrChunkNotFound = errors.New("chunk not found")
-	ErrNoAvailableDN = errors.New("no available data node")
+	ErrSDPNotFound     = errors.New("SDP not found")
+	ErrChunkNotFound   = errors.New("chunk not found")
+	ErrNoAvailableDN   = errors.New("no available data node")
 	ErrCommitDNTimeout = errors.New("commit dn timeout")
-	ErrDNNotFound = errors.New("data node not found")
+	ErrDNNotFound      = errors.New("data node not found")
 )

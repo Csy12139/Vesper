@@ -22,7 +22,7 @@ enum ErrorCode {
   NO_AVAILABLE_DN = 10011;
   COMMIT_DN_CMD_TIMEOUT = 10012;
   DN_NOT_FOUND = 10013;
-  
+
   UNKNOWN = 50000;
 }
 
@@ -93,12 +93,9 @@ message GetSDPCandidatesRequest{
 }
 
 message GetSDPCandidatesResponse{
-  bool success = 1;
-  string error_message = 2;
-  string source_uuid = 3;
-  string target_uuid = 4;
-  string sdp = 5;
-  repeated string candidates = 6;
+  string sdp = 1;
+  repeated string candidates = 2;
+  ErrorCode code = 3;
 }
 
 message HeartbeatRequest {
