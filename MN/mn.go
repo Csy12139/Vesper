@@ -27,6 +27,7 @@ type MateNode struct {
 	dataNodes      map[string]*DataNodeInfo
 	dataNodeLock   sync.RWMutex
 	chunkMetaMutex sync.Map
+	fileMetaMutex  sync.Map
 	kv             *KVTable
 }
 
@@ -132,6 +133,18 @@ func (mn *MateNode) lockChunk(ChunkId uint64) {
 
 func (mn *MateNode) unlockChunk(ChunkId uint64) {
 	mu, ok := mn.chunkMetaMutex.Load(ChunkId)
+	if ok {
+		mu.(*sync.Mutex).Unlock()
+	}
+}
+
+func (mn *MateNode) lockFile(FileId uint64) {
+	mu, _ := mn.fileMetaMutex.LoadOrStore(FileId, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+}
+
+func (mn *MateNode) unlockFile(FileId uint64) {
+	mu, ok := mn.fileMetaMutex.Load(FileId)
 	if ok {
 		mu.(*sync.Mutex).Unlock()
 	}

@@ -9,4 +9,6 @@ mkdir -p build-test
 echo "Compiling DN test file..."
 go test -c -o build-test/dn ../DN
 go test ./test
+rm -rf test/logs && go test ./test/add_chunk_test.go
+
 echo "Build complete! Binaries are in the build-test directory"

@@ -61,6 +61,7 @@ func (mn *MateNode) DoHeartbeat(ctx context.Context, req *pb.HeartbeatRequest) (
 		log.Infof("receive first heartbeat from data node [%s], now join it", request.UUID)
 		dn = NewDataNodeInfo(request.UUID)
 		dn.SetALIVE()
+		dn.lastHeartbeatTime = time.Now()
 		mn.dataNodeLock.Lock()
 		defer mn.dataNodeLock.Unlock()
 		mn.dataNodes[request.UUID] = dn
@@ -112,9 +113,10 @@ func (mn *MateNode) AddChunkMeta(ctx context.Context, req *pb.AddChunkMetaReques
 		return nil, err
 	}
 	chunk := &common.ChunkMeta{
-		ID:      id,
-		State:   common.ChunkState_CREATING,
-		DnUuids: make(map[string]struct{}),
+		ID:                  id,
+		State:               common.ChunkState_CREATING,
+		DnUuids:             make(map[string]struct{}),
+		LastUpdateTimestamp: time.Now(),
 	}
 	err = mn.kv.PutChunkMeta(chunk)
 	if err != nil {
@@ -149,6 +151,7 @@ func (mn *MateNode) CompleteAddChunkMeta(ctx context.Context, req *pb.CompleteAd
 		return nil, err
 	}
 	meta.State = common.ChunkState_CREATED
+	meta.LastUpdateTimestamp = time.Now()
 	err = mn.kv.PutChunkMeta(meta)
 	if err != nil {
 		return nil, err
@@ -227,4 +230,44 @@ func (mn *MateNode) CompleteAddChunkOnDN(ctx context.Context, req *pb.CompleteAd
 		return nil, err
 	}
 	return &pb.CompleteAddChunkOnDNResponse{}, nil
+}
+func (mn *MateNode) AddFileMeta(ctx context.Context, req *pb.AddFileMetaRequest) (*pb.AddFileMetaResponse, error) {
+	id, err := mn.kv.AllocateFileId()
+	mn.lockFile(id)
+	defer mn.unlockFile(id)
+	if err != nil {
+		return nil, err
+	}
+	file := &common.FileMeta{
+		ID:                  id,
+		LastUpdateTimestamp: time.Now(),
+	}
+	err = mn.kv.PutFileMeta(file)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.AddFileMetaResponse{
+		FileId: file.ID,
+	}, nil
+}
+func (mn *MateNode) CompleteAddFileMeta(ctx context.Context, req *pb.CompleteAddFileMetaRequest) (*pb.CompleteAddFileMetaResponse, error) {
+	fileId := req.FileId
+	mn.lockFile(fileId)
+	defer mn.unlockFile(fileId)
+	meta, err := mn.kv.GetFileMeta(fileId)
+	if err != nil {
+		return nil, err
+	}
+	meta.FileName = req.FileName
+	meta.FileSize = req.FileSize
+	meta.State = common.FileState_EXISTED
+	meta.LastUpdateTimestamp = time.Now()
+	for _, chunkId := range req.ChunkId {
+		meta.ChunkIds[chunkId] = struct{}{}
+	}
+	err = mn.kv.PutFileMeta(meta)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CompleteAddFileMetaResponse{}, nil
 }

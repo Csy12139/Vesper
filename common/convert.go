@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	pb "github.com/Csy12139/Vesper/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Proto2Command converts a protobuf Command to internal format
@@ -189,6 +190,10 @@ func ChunkMeta2Proto(meta *ChunkMeta) *pb.ChunkMeta {
 			protoMeta.DnUuids = append(protoMeta.DnUuids, uuid)
 		}
 	}
+	// Convert time.Time to google.protobuf.Timestamp
+	if !meta.LastUpdateTimestamp.IsZero() {
+		protoMeta.LastUpdateTimestamp = timestamppb.New(meta.LastUpdateTimestamp)
+	}
 
 	return protoMeta
 }
@@ -206,6 +211,58 @@ func Proto2ChunkMeta(protoMeta *pb.ChunkMeta) *ChunkMeta {
 	// Convert repeated string to map[string]struct{}
 	for _, uuid := range protoMeta.DnUuids {
 		meta.DnUuids[uuid] = struct{}{}
+	}
+	// Convert google.protobuf.Timestamp to time.Time
+	if protoMeta.LastUpdateTimestamp != nil {
+		meta.LastUpdateTimestamp = protoMeta.LastUpdateTimestamp.AsTime()
+	}
+	return meta
+}
+
+func FileMeta2Proto(meta *FileMeta) *pb.FileMeta {
+	if meta == nil {
+		return nil
+	}
+	protoMeta := &pb.FileMeta{
+		Id:       meta.ID,
+		FileName: meta.FileName,
+		FileSize: meta.FileSize,
+		State:    pb.FileState(meta.State),
+	}
+	// Convert map[string]struct{} to repeated string
+	if meta.ChunkIds != nil {
+		protoMeta.ChunkId = make([]string, 0, len(meta.ChunkIds))
+		for chunkId := range meta.ChunkIds {
+			protoMeta.ChunkId = append(protoMeta.ChunkId, chunkId)
+		}
+	}
+	// Convert time.Time to google.protobuf.Timestamp
+	if !meta.LastUpdateTimestamp.IsZero() {
+		protoMeta.LastUpdateTimestamp = timestamppb.New(meta.LastUpdateTimestamp)
+	}
+
+	return protoMeta
+}
+
+func Proto2FileMeta(protoMeta *pb.FileMeta) *FileMeta {
+	if protoMeta == nil {
+		return nil
+	}
+	meta := &FileMeta{
+		ID:       protoMeta.Id,
+		FileName: protoMeta.FileName,
+		FileSize: protoMeta.FileSize,
+		State:    FileState(protoMeta.State),
+		ChunkIds: make(map[string]struct{}),
+	}
+
+	// Convert repeated string to map[string]struct{}
+	for _, chunkId := range protoMeta.ChunkId {
+		meta.ChunkIds[chunkId] = struct{}{}
+	}
+	// Convert google.protobuf.Timestamp to time.Time
+	if protoMeta.LastUpdateTimestamp != nil {
+		meta.LastUpdateTimestamp = protoMeta.LastUpdateTimestamp.AsTime()
 	}
 	return meta
 }
@@ -225,6 +282,8 @@ func Error2Proto(err error) pb.ErrorCode {
 		return pb.ErrorCode_DN_NOT_FOUND
 	case errors.Is(err, ErrSDPNotFound):
 		return pb.ErrorCode_SDP_NOT_FOUND
+	case errors.Is(err, ErrFileNotFound):
+		return pb.ErrorCode_FILE_NOT_FOUND
 	default:
 		return pb.ErrorCode_UNKNOWN
 	}
@@ -244,6 +303,8 @@ func Proto2Error(code pb.ErrorCode) error {
 		return ErrDNNotFound
 	case pb.ErrorCode_SDP_NOT_FOUND:
 		return ErrSDPNotFound
+	case pb.ErrorCode_FILE_NOT_FOUND:
+		return ErrFileNotFound
 	default:
 		return fmt.Errorf("unknown error code: %v", code)
 	}

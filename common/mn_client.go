@@ -179,3 +179,37 @@ func (c *MNClient) CompleteAddChunkOnDN(chunkId uint64, uuid string) error {
 	}
 	return nil
 }
+
+func (c *MNClient) AddFileMeta() (uint64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
+	defer cancel()
+
+	pbResp, err := c.client.AddFileMeta(ctx, &pb.AddFileMetaRequest{})
+	if err != nil {
+		return 0, fmt.Errorf("add file meta failed: %w", err)
+	}
+	return pbResp.FileId, nil
+}
+
+func (c *MNClient) CompleteAddFileMeta(fileId uint64, fileName string, fileSize uint64, chunkId map[string]struct{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
+	defer cancel()
+
+	req := &pb.CompleteAddFileMetaRequest{
+		FileId:   fileId,
+		FileName: fileName,
+		FileSize: fileSize,
+	}
+	if chunkId != nil {
+		req.ChunkId = make([]string, 0, len(chunkId))
+		for id := range chunkId {
+			req.ChunkId = append(req.ChunkId, id)
+		}
+	}
+
+	_, err := c.client.CompleteAddFileMeta(ctx, req)
+	if err != nil {
+		return fmt.Errorf("complete add file meta failed: %w", err)
+	}
+	return nil
+}

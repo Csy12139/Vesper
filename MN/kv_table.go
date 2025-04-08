@@ -14,6 +14,7 @@ import (
 type KVTable struct {
 	db               *badger.DB
 	ChunkIdSeq       *badger.Sequence
+	FileIdSeq        *badger.Sequence
 	chunkTablePrefix []byte
 	fileTablePrefix  []byte
 	chunkIdPrefix    []byte
@@ -98,6 +99,60 @@ func (kv *KVTable) AllocateChunkId() (uint64, error) {
 	id, err := kv.ChunkIdSeq.Next()
 	if err != nil {
 		return 0, fmt.Errorf("allocate chunk id failed [%s]", err)
+	}
+	return id, nil
+}
+
+func (kv *KVTable) PutFileMeta(meta *common.FileMeta) error {
+	key := kv.fileTablePrefix
+	key = append(key, common.Uint64ToBytes(meta.ID)...)
+	value, err := proto.Marshal(common.FileMeta2Proto(meta))
+	if err != nil {
+		return fmt.Errorf("marshal file meta failed [%s]", err)
+	}
+	err = kv.db.Update(func(txn *badger.Txn) error {
+		err := txn.Set(key, value)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
+func (kv *KVTable) GetFileMeta(FileId uint64) (*common.FileMeta, error) {
+	key := kv.fileTablePrefix
+	key = append(key, common.Uint64ToBytes(FileId)...)
+	var meta *common.FileMeta
+	err := kv.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		err = item.Value(func(val []byte) error {
+			var fileMetaProto pb.FileMeta
+			err := proto.Unmarshal(val, &fileMetaProto)
+			if err != nil {
+				return err
+			}
+			meta = common.Proto2FileMeta(&fileMetaProto)
+			return nil
+		})
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil, common.ErrFileNotFound
+		}
+		return nil, err
+	}
+	return meta, nil
+}
+
+func (kv *KVTable) AllocateFileId() (uint64, error) {
+	id, err := kv.FileIdSeq.Next()
+	if err != nil {
+		return 0, fmt.Errorf("allocate file id failed [%s]", err)
 	}
 	return id, nil
 }

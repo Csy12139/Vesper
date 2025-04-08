@@ -149,6 +149,12 @@ const (
 	ChunkState_CREATED  ChunkState = 1
 )
 
+type FileState int
+
+const (
+	FileState_EXISTED FileState = 0
+)
+
 // ChunkSize defines the size of each chunk in bytes (32 MiB)
 const ChunkSize = 32 * 1024 * 1024
 
@@ -161,14 +167,25 @@ type Chunk struct {
 }
 
 type ChunkMeta struct {
-	ID      uint64
-	State   ChunkState
-	DnUuids map[string]struct{}
+	ID                  uint64
+	State               ChunkState
+	DnUuids             map[string]struct{}
+	LastUpdateTimestamp time.Time
+}
+
+type FileMeta struct {
+	ID                  uint64
+	FileName            string
+	FileSize            uint64
+	State               FileState
+	ChunkIds            map[string]struct{}
+	LastUpdateTimestamp time.Time
 }
 
 var (
 	ErrSDPNotFound     = errors.New("SDP not found")
 	ErrChunkNotFound   = errors.New("chunk not found")
+	ErrFileNotFound    = errors.New("file not found")
 	ErrNoAvailableDN   = errors.New("no available data node")
 	ErrCommitDNTimeout = errors.New("commit dn timeout")
 	ErrDNNotFound      = errors.New("data node not found")
