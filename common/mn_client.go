@@ -213,3 +213,17 @@ func (c *MNClient) CompleteAddFileMeta(fileId uint64, fileName string, fileSize 
 	}
 	return nil
 }
+
+func (c *MNClient) UpdateReceivingRate(rate float64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
+	defer cancel()
+
+	req := &pb.UpdateReceivingRateRequest{
+		Rate: rate,
+	}
+	_, err := c.client.UpdateReceivingRate(ctx, req)
+	if err != nil {
+		return fmt.Errorf("update receiving rate failed: %w", err)
+	}
+	return nil
+}

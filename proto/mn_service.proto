@@ -17,6 +17,7 @@ service MNService {
   rpc CompleteAddChunkOnDN(CompleteAddChunkOnDNRequest) returns (CompleteAddChunkOnDNResponse) {}
   rpc AddFileMeta(AddFileMetaRequest) returns (AddFileMetaResponse) {}
   rpc CompleteAddFileMeta(CompleteAddFileMetaRequest) returns (CompleteAddFileMetaResponse) {}
+  rpc UpdateReceivingRate(UpdateReceivingRateRequest) returns (UpdateReceivingRateResponse) {}
 }
 enum ErrorCode {
   OK = 0;
@@ -194,3 +195,10 @@ message FileMeta{
   google.protobuf.Timestamp last_update_timestamp = 6;
 }
 
+message UpdateReceivingRateRequest{
+  double rate = 1;
+}
+
+message UpdateReceivingRateResponse{
+
+}

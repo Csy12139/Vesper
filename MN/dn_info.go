@@ -24,6 +24,7 @@ type DataNodeInfo struct {
 	waitResponseCommand map[uint64]*common.Command
 	lastHeartbeatTime   time.Time
 	mutex               sync.Mutex
+	//Todo: capacity and receiving rate
 }
 
 func NewDataNodeInfo(uuid string) *DataNodeInfo {

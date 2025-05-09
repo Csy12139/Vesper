@@ -1,6 +1,8 @@
 package DN
 
 import (
+	"fmt"
+	"github.com/Csy12139/Vesper/p2p"
 	"sync/atomic"
 	"time"
 
@@ -9,25 +11,31 @@ import (
 )
 
 type DataNode struct {
-	UUID       string
-	stop       atomic.Bool
-	MNAddr     string
-	mnClient   *common.MNClient
-	resultChan chan common.CommandResult
-	dataPath   string
+	UUID         string
+	stop         atomic.Bool
+	MNAddr       string
+	mnClient     *common.MNClient
+	resultChan   chan common.CommandResult
+	dataTransfer *p2p.DataTransfer
+	dataPath     string
 }
 
 func NewDataNode(UUID string, MNAddr string, DataPath string) (*DataNode, error) {
 	mnClient, err := common.NewMNClient(MNAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NewMNClient error:%v", err)
+	}
+	trans, err := p2p.NewDataTransfer(UUID, MNAddr)
+	if err != nil {
+		return nil, fmt.Errorf("NewDataTransfer error:%v", err)
 	}
 	dn := DataNode{
-		UUID:       UUID,
-		MNAddr:     MNAddr,
-		mnClient:   mnClient,
-		resultChan: make(chan common.CommandResult, 100),
-		dataPath:   DataPath,
+		UUID:         UUID,
+		MNAddr:       MNAddr,
+		mnClient:     mnClient,
+		resultChan:   make(chan common.CommandResult, 100),
+		dataPath:     DataPath,
+		dataTransfer: trans,
 	}
 	dn.stop.Store(true)
 	return &dn, nil
@@ -58,6 +66,23 @@ func (dn *DataNode) doHeartbeatLoop() {
 		for _, cmd := range resp.Commands {
 			log.Infof("Received command: type=%v", cmd.Type)
 			dn.HandleCommand(cmd)
+
+		}
+	}
+}
+
+func (dn *DataNode) updateReceivingRateLoop() {
+	timeInterval := 5 * time.Second
+	ticker := time.NewTicker(timeInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		totalBytes := dn.dataTransfer.GetTotalBytes()
+		if totalBytes != 0 {
+			currentRate := float64(totalBytes) / timeInterval.Seconds()
+			err := dn.mnClient.UpdateReceivingRate(currentRate)
+			if err != nil {
+				log.Errorf("UpdateReceivingRate error:%v", err)
+			}
 		}
 	}
 }

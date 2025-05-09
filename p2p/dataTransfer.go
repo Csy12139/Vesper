@@ -7,6 +7,7 @@ import (
 	"github.com/Csy12139/Vesper/common"
 	"github.com/Csy12139/Vesper/log"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,11 +33,10 @@ func NewDataTransfer(SourceUUID string, MNAddr string) (*DataTransfer, error) {
 	}, nil
 }
 
-func (t *DataTransfer) Send(targetUUID string, dataName string, data []byte, ctx context.Context) error {
+func (t *DataTransfer) CreateSenderP2PConnection(targetUUID string, ctx context.Context) error {
 	if ctx.Err() != nil {
-		return fmt.Errorf("sendDate failed: %v", ctx.Err())
+		return ctx.Err()
 	}
-
 	t.LockUuid(targetUUID)
 	defer t.UnlockUuid(targetUUID)
 	t.p2pConnectionsMutex.Lock()
@@ -112,7 +112,24 @@ func (t *DataTransfer) Send(targetUUID string, dataName string, data []byte, ctx
 		t.p2pConnections[targetUUID] = p2p
 		t.p2pConnectionsMutex.Unlock()
 	}
-	err := p2p.SendDate(dataName, data, ctx)
+	return nil
+}
+
+func (t *DataTransfer) Send(targetUUID string, dataName string, data []byte) error {
+	t.LockUuid(targetUUID)
+	defer t.UnlockUuid(targetUUID)
+	t.p2pConnectionsMutex.Lock()
+	p2p, exist := t.p2pConnections[targetUUID]
+	t.p2pConnectionsMutex.Unlock()
+	if !exist || !p2p.IsConnection() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		err := t.CreateSenderP2PConnection(targetUUID, ctx)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("CreateSenderP2PConnection failed: %v", err)
+		}
+	}
+	err := p2p.SendDate(dataName, data)
 	if err != nil {
 		return fmt.Errorf("sendDate failed: %v", err)
 	}
@@ -197,6 +214,17 @@ func (t *DataTransfer) StartToReceive(targetUUID string, ctx context.Context, ca
 		}
 	}
 	return nil
+}
+
+func (t *DataTransfer) GetTotalBytes() int64 {
+	t.p2pConnectionsMutex.Lock()
+	defer t.p2pConnectionsMutex.Unlock()
+	var totalBytes int64
+	for _, p := range t.p2pConnections {
+		atomic.AddInt64(&totalBytes, p.totalBytes)
+		atomic.StoreInt64(&p.totalBytes, 0) // clear
+	}
+	return totalBytes
 }
 
 func (t *DataTransfer) LockUuid(targetUUID string) {

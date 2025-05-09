@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/Csy12139/Vesper/common"
 	"github.com/Csy12139/Vesper/log"
-	"github.com/Csy12139/Vesper/p2p"
 	"time"
 )
 
@@ -80,13 +79,8 @@ func (dn *DataNode) handleWriteChunk(cmd *common.AddChunkCmd) error {
 		return fmt.Errorf("write chunk command is nil")
 	}
 	log.Infof("Processing write chunk command for target UUID: %s", cmd.TargetUUID)
-	// TODO: Implement write chunk logic
-	trans, err := p2p.NewDataTransfer(dn.UUID, dn.MNAddr)
-	if err != nil {
-		return fmt.Errorf("new data transfer error: %v", err)
-	}
 	// TODO: CRC校验
-	err = trans.StartToReceive(cmd.TargetUUID, ctx, func(targetUUID string, label string, data []byte) {
+	err := dn.dataTransfer.StartToReceive(cmd.TargetUUID, ctx, func(targetUUID string, label string, data []byte) {
 		log.Info("Receive data !")
 		for _, b := range data {
 			if b != 0 {
@@ -98,7 +92,10 @@ func (dn *DataNode) handleWriteChunk(cmd *common.AddChunkCmd) error {
 			log.Error("[Receiver]The received data length is incorrect.")
 		}
 	})
-
+	if err != nil {
+		return fmt.Errorf("write chunk command error: %v", err)
+	}
+	//TODO:写入chunk
 	return nil
 }
 

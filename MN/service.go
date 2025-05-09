@@ -271,3 +271,7 @@ func (mn *MateNode) CompleteAddFileMeta(ctx context.Context, req *pb.CompleteAdd
 	}
 	return &pb.CompleteAddFileMetaResponse{}, nil
 }
+func (mn *MateNode) UpdateReceivingRate(ctx context.Context, req *pb.UpdateReceivingRateRequest) (*pb.UpdateReceivingRateResponse, error) {
+	//TODO: unimplemented logic
+	return &pb.UpdateReceivingRateResponse{}, nil
+}

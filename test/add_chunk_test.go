@@ -102,7 +102,12 @@ func TestAddChunk(t *testing.T) {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 			defer cancel()
-			err = trans.Send(dnId, strconv.FormatUint(chunkId, 10), data, ctx)
+			err = trans.CreateSenderP2PConnection(dnId, ctx)
+			if err != nil {
+				t.Errorf("Failed to create P2P connection: %v", err)
+				return
+			}
+			err = trans.Send(dnId, strconv.FormatUint(chunkId, 10), data)
 			if err != nil {
 				t.Errorf("Failed to send data: %v", err)
 				return

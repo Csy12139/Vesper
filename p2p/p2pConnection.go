@@ -2,24 +2,20 @@ package p2p
 
 import (
 	"context"
-	"fmt"
 	"github.com/Csy12139/Vesper/log"
 	"github.com/pion/webrtc/v4"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type P2PConnection struct {
-	mnAddr string
-
-	conn *webrtc.PeerConnection
-
-	//dataCh *webrtc.DataChannel
-	//msgCh  chan webrtc.DataChannelMessage
-
+	mnAddr         string
+	conn           *webrtc.PeerConnection
 	candidates     []webrtc.ICECandidateInit
 	candidatesLock sync.Mutex
 	gatherDone     chan struct{}
+	totalBytes     int64
 }
 
 func NewP2PConnection() (*P2PConnection, error) {
@@ -135,11 +131,7 @@ func (p *P2PConnection) WaitConnection(ctx context.Context) error {
 	return nil
 }
 
-func (p *P2PConnection) SendDate(label string, data []byte, ctx context.Context) error {
-	if ctx.Err() != nil {
-		return fmt.Errorf("sendDate failed: %v", ctx.Err())
-	}
-
+func (p *P2PConnection) SendDate(label string, data []byte) error {
 	ch, err := p.conn.CreateDataChannel(label, nil)
 	if err != nil {
 		return err
@@ -155,12 +147,7 @@ func (p *P2PConnection) SendDate(label string, data []byte, ctx context.Context)
 	})
 	// Wait DataChannel Open
 	for !(ch.ReadyState() == webrtc.DataChannelStateOpen) {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("wait dataChannel open failed: %v", ctx.Err())
-		default:
-			time.Sleep(100 * time.Millisecond)
-		}
+		time.Sleep(100 * time.Millisecond)
 	}
 	// Send data
 	const bufferedAmountLowThreshold = 1 * 1024 * 1024
@@ -194,12 +181,7 @@ func (p *P2PConnection) SendDate(label string, data []byte, ctx context.Context)
 	sendNextChunk()
 	// Wait data send over and wait buffer decrease to zero
 	for ch.BufferedAmount() > 0 || end < dataLen {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("wait buffer clear failed: %v", ctx.Err())
-		default:
-			time.Sleep(100 * time.Millisecond)
-		}
+		time.Sleep(100 * time.Millisecond)
 	}
 	log.Infof("All data sent.")
 	return nil
@@ -221,6 +203,7 @@ func (p *P2PConnection) RegisterReceiveDataCallback(callback func(label string, 
 		ch.OnMessage(func(msg webrtc.DataChannelMessage) {
 			select {
 			case msgCh <- msg:
+				atomic.AddInt64(&p.totalBytes, int64(len(msg.Data)))
 			default:
 				log.Warnf("msgCh full or closed for %s", ch.Label())
 			}
