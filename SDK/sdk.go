@@ -1,9 +1,10 @@
-package sdk
+package SDK
 
 import (
 	"fmt"
 	"github.com/Csy12139/Vesper/common"
 	"github.com/Csy12139/Vesper/p2p"
+	"sync"
 )
 
 type Sdk struct {
@@ -12,10 +13,11 @@ type Sdk struct {
 	mnClient     *common.MNClient
 	dataTransfer *p2p.DataTransfer
 	filePath     string
-	Files        map[string]uint64 // 需要fileID吗
+	filesMap     map[string]uint64
+	filesMapMux  sync.Mutex
 }
 
-func NewSdk(UUID string, MNAddr string, FilePath string, ConcurrencyNumber uint64) (*Sdk, error) {
+func NewSdk(UUID string, MNAddr string, FilePath string) (*Sdk, error) {
 	mnClient, err := common.NewMNClient(MNAddr)
 	if err != nil {
 		return nil, fmt.Errorf("NewMNClient error:%v", err)
@@ -30,7 +32,8 @@ func NewSdk(UUID string, MNAddr string, FilePath string, ConcurrencyNumber uint6
 		mnClient:     mnClient,
 		dataTransfer: trans,
 		filePath:     FilePath,
-		Files:        make(map[string]uint64),
+		filesMap:     make(map[string]uint64),
+		filesMapMux:  sync.Mutex{},
 	}
 	return &sdk, nil
 }

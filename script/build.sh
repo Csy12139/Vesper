@@ -20,4 +20,8 @@ go build -o build/dn ./DN
 echo "Building MN..."
 go build -o build/mn ./MN
 
+# Build SDK binary
+echo "Building SDK..."
+go build -o build/sdk ./SDK
+
 echo "Build complete! Binaries are in the build directory"

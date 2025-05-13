@@ -39,6 +39,10 @@ func (kv *KVTable) Open(path string) error {
 	if err != nil {
 		return err
 	}
+	kv.FileIdSeq, err = kv.db.GetSequence(kv.fileTablePrefix, 16)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -53,6 +53,23 @@ func (dn *DataNodeInfo) SubmitAddChunkCmd(targetUUID string, timeout time.Durati
 	return cmd.ID
 }
 
+func (dn *DataNodeInfo) SubmitReadChunkCmd(targetUUID string, chunkID uint64, timeout time.Duration, cb func(cmdId uint64, err error)) uint64 {
+	cmd := &common.Command{
+		ID:             cmdId.Add(1),
+		Type:           common.CommandType_READ_CHUNK,
+		ReadChunkCmd:   &common.ReadChunkCmd{TargetUUID: targetUUID, ChunkID: chunkID},
+		AddChunkCmd:    nil,
+		DeleteChunkCmd: nil,
+		StartTimestamp: time.Now(),
+		Timeout:        timeout,
+		CallBack:       cb,
+	}
+	log.Infof("Submit read chunk cmd id [%v] to cmdQueue, cmd info[%+v]", cmd.ID, cmd)
+	dn.cmdQueue <- cmd
+	log.Debugf("commandQueue addr [%v] of [%v] queue size [%d]", dn.cmdQueue, dn.UUID, len(dn.cmdQueue))
+	return cmd.ID
+}
+
 func (dn *DataNodeInfo) SetDead() {
 	dn.state = DEAD
 }

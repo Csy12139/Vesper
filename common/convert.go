@@ -227,14 +227,8 @@ func FileMeta2Proto(meta *FileMeta) *pb.FileMeta {
 		Id:       meta.ID,
 		FileName: meta.FileName,
 		FileSize: meta.FileSize,
+		ChunkIds: meta.ChunkIds,
 		State:    pb.FileState(meta.State),
-	}
-	// Convert map[string]struct{} to repeated string
-	if meta.ChunkIds != nil {
-		protoMeta.ChunkId = make([]string, 0, len(meta.ChunkIds))
-		for chunkId := range meta.ChunkIds {
-			protoMeta.ChunkId = append(protoMeta.ChunkId, chunkId)
-		}
 	}
 	// Convert time.Time to google.protobuf.Timestamp
 	if !meta.LastUpdateTimestamp.IsZero() {
@@ -253,12 +247,7 @@ func Proto2FileMeta(protoMeta *pb.FileMeta) *FileMeta {
 		FileName: protoMeta.FileName,
 		FileSize: protoMeta.FileSize,
 		State:    FileState(protoMeta.State),
-		ChunkIds: make(map[string]struct{}),
-	}
-
-	// Convert repeated string to map[string]struct{}
-	for _, chunkId := range protoMeta.ChunkId {
-		meta.ChunkIds[chunkId] = struct{}{}
+		ChunkIds: protoMeta.ChunkIds,
 	}
 	// Convert google.protobuf.Timestamp to time.Time
 	if protoMeta.LastUpdateTimestamp != nil {

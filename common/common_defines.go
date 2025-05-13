@@ -25,6 +25,7 @@ type CommandResult struct {
 // ReadChunkCmd represents a command to read a chunk
 type ReadChunkCmd struct {
 	TargetUUID string
+	ChunkID    uint64
 }
 
 // AddChunkCmd represents a command to write a chunk
@@ -176,9 +177,9 @@ type ChunkMeta struct {
 type FileMeta struct {
 	ID                  uint64
 	FileName            string
-	FileSize            uint64
+	FileSize            int64
 	State               FileState
-	ChunkIds            map[string]struct{}
+	ChunkIds            map[uint64]int64
 	LastUpdateTimestamp time.Time
 }
 

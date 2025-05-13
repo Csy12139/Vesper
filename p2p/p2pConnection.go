@@ -169,7 +169,7 @@ func (p *P2PConnection) SendDate(label string, data []byte) error {
 			log.Errorf("Send chunk %d-%d failed: %v", offset, end, err)
 			return
 		}
-		log.Infof("Sent chunk %d-%d bytes", offset, end)
+		log.Infof("Sent chunk %d-%d bytes on DataChannel [%v]", offset, end, ch.Label())
 		offset = end
 	}
 	ch.SetBufferedAmountLowThreshold(bufferedAmountLowThreshold)
@@ -211,7 +211,7 @@ func (p *P2PConnection) RegisterReceiveDataCallback(callback func(label string, 
 		go func() {
 			var receivedData []byte
 			for msg := range msgCh {
-				log.Infof("Received data of %d bytes on %s", len(msg.Data), ch.Label())
+				log.Infof("Received data of %d bytes on DataChannel [%s]", len(msg.Data), ch.Label())
 				receivedData = append(receivedData, msg.Data...)
 			}
 			callback(ch.Label(), receivedData)

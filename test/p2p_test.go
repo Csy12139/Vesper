@@ -87,12 +87,12 @@ func Sender(t *testing.T) {
 	}
 	// TODO:同时Send
 	data := make([]byte, DataSize)
-	err = pc.SendDate("test", data, ctx)
+	err = pc.SendDate("test", data)
 	if err != nil {
 		t.Fatal("[Sender]SendDate failed: " + err.Error())
 	}
 	//data = bytes.Repeat([]byte{1}, DataSize)
-	err = pc.SendDate("another", data, ctx)
+	err = pc.SendDate("another", data)
 	if err != nil {
 		t.Fatal("[Sender]SendDate failed: " + err.Error())
 	}

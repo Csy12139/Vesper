@@ -33,9 +33,9 @@ func NewDataTransfer(SourceUUID string, MNAddr string) (*DataTransfer, error) {
 	}, nil
 }
 
-func (t *DataTransfer) CreateSenderP2PConnection(targetUUID string, ctx context.Context) error {
+func (t *DataTransfer) CreateSenderP2PConnection(targetUUID string, ctx context.Context) (*P2PConnection, error) {
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return nil, ctx.Err()
 	}
 	t.LockUuid(targetUUID)
 	defer t.UnlockUuid(targetUUID)
@@ -46,27 +46,27 @@ func (t *DataTransfer) CreateSenderP2PConnection(targetUUID string, ctx context.
 		var err error
 		p2p, err = NewP2PConnection()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else if !p2p.IsConnection() {
 		err := p2p.CloseConnection()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		p2p, err = NewP2PConnection()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if !p2p.IsConnection() {
 		offerSdp, offerCandidate, err := p2p.GetSenderSDPCandidates()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		log.Debug("get sender sdp and candidate")
 		err = t.mnClient.PutSDPCandidates(t.sourceUUID, targetUUID, offerSdp, offerCandidate)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		log.Debug("put sender sdp and candidate")
 		var answerSdp string
@@ -93,53 +93,45 @@ func (t *DataTransfer) CreateSenderP2PConnection(targetUUID string, ctx context.
 		select {
 		case <-resultChan:
 			if err != nil {
-				return fmt.Errorf("get sender SDPCandidates failed: %v", err)
+				return nil, fmt.Errorf("get sender SDPCandidates failed: %v", err)
 			}
 		case <-ctx.Done():
-			return fmt.Errorf("get sender SDPCandidates failed: %v", ctx.Err())
+			return nil, fmt.Errorf("get sender SDPCandidates failed: %v", ctx.Err())
 		}
 
 		err = p2p.SetRemotedDescription(answerSdp, answerCandidate)
 		if err != nil {
-			return fmt.Errorf("set sender remoted description failed: %v", err)
+			return nil, fmt.Errorf("set sender remoted description failed: %v", err)
 		}
 
 		err = p2p.WaitConnection(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		t.p2pConnectionsMutex.Lock()
 		t.p2pConnections[targetUUID] = p2p
 		t.p2pConnectionsMutex.Unlock()
 	}
-	return nil
+	return p2p, nil
 }
 
 func (t *DataTransfer) Send(targetUUID string, dataName string, data []byte) error {
-	t.LockUuid(targetUUID)
-	defer t.UnlockUuid(targetUUID)
-	t.p2pConnectionsMutex.Lock()
-	p2p, exist := t.p2pConnections[targetUUID]
-	t.p2pConnectionsMutex.Unlock()
-	if !exist || !p2p.IsConnection() {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-		err := t.CreateSenderP2PConnection(targetUUID, ctx)
-		cancel()
-		if err != nil {
-			return fmt.Errorf("CreateSenderP2PConnection failed: %v", err)
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	p2p, err := t.CreateSenderP2PConnection(targetUUID, ctx)
+	cancel()
+	if err != nil {
+		return fmt.Errorf("CreateSenderP2PConnection failed: %v", err)
 	}
-	err := p2p.SendDate(dataName, data)
+	log.Infof("[%v] send data to [%v]", t.sourceUUID, targetUUID)
+	err = p2p.SendDate(dataName, data)
 	if err != nil {
 		return fmt.Errorf("sendDate failed: %v", err)
 	}
 	return nil
 }
-func (t *DataTransfer) StartToReceive(targetUUID string, ctx context.Context, callback func(targetUUID string, label string, data []byte)) error {
-	if ctx.Err() != nil {
-		return fmt.Errorf("sendDate failed: %v", ctx.Err())
-	}
-
+func (t *DataTransfer) StartToReceive(targetUUID string, callback func(targetUUID string, label string, data []byte)) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
 	t.LockUuid(targetUUID)
 	defer t.UnlockUuid(targetUUID)
 	t.p2pConnectionsMutex.Lock()
@@ -204,14 +196,14 @@ func (t *DataTransfer) StartToReceive(targetUUID string, ctx context.Context, ca
 		t.p2pConnectionsMutex.Lock()
 		t.p2pConnections[targetUUID] = p2p
 		t.p2pConnectionsMutex.Unlock()
-
-		handle := func(label string, data []byte) {
-			callback(targetUUID, label, data)
-		}
-		err = p2p.RegisterReceiveDataCallback(handle)
-		if err != nil {
-			return fmt.Errorf("register receive data failed: %v", err)
-		}
+	}
+	handle := func(label string, data []byte) {
+		callback(targetUUID, label, data)
+	}
+	log.Infof("[%v] receive data from [%v]", t.sourceUUID, targetUUID)
+	err := p2p.RegisterReceiveDataCallback(handle)
+	if err != nil {
+		return fmt.Errorf("register receive data failed: %v", err)
 	}
 	return nil
 }

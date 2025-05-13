@@ -208,6 +208,29 @@ func (mn *MateNode) AddChunkOnDN(ctx context.Context, req *pb.AddChunkOnDNReques
 	}, nil
 }
 
+func (mn *MateNode) ReadChunkFromDN(ctx context.Context, req *pb.ReadChunkFromDNRequest) (*pb.ReadChunkFromDNResponse, error) {
+	log.Debug("start read chunk from dn")
+	mn.dataNodeLock.RLock()
+	dn, exist := mn.dataNodes[req.DnUuid]
+	mn.dataNodeLock.RUnlock()
+	if !exist {
+		return &pb.ReadChunkFromDNResponse{
+			Code: pb.ErrorCode_DN_NOT_FOUND,
+		}, nil
+	}
+	dn.mutex.Lock()
+	defer dn.mutex.Unlock()
+	dn.SubmitReadChunkCmd(req.SdkUuid, req.ChunkId, 7*time.Second, func(cmdId uint64, err error) {
+		if err != nil {
+			log.Errorf("read chunk cmd [%d] faild error [%v]", cmdId, err)
+		}
+		log.Infof("read chunk cmd [%d] success", cmdId)
+	})
+	return &pb.ReadChunkFromDNResponse{
+		Code: pb.ErrorCode_OK,
+	}, nil
+}
+
 func (mn *MateNode) CompleteAddChunkOnDN(ctx context.Context, req *pb.CompleteAddChunkOnDNRequest) (*pb.CompleteAddChunkOnDNResponse, error) {
 	chunkID := req.ChunkId
 	dnUUID := req.Uuid
@@ -240,6 +263,10 @@ func (mn *MateNode) AddFileMeta(ctx context.Context, req *pb.AddFileMetaRequest)
 	}
 	file := &common.FileMeta{
 		ID:                  id,
+		FileName:            req.FileName,
+		FileSize:            req.FileSize,
+		State:               common.FileState_EXISTED,
+		ChunkIds:            req.ChunkId,
 		LastUpdateTimestamp: time.Now(),
 	}
 	err = mn.kv.PutFileMeta(file)
@@ -250,27 +277,22 @@ func (mn *MateNode) AddFileMeta(ctx context.Context, req *pb.AddFileMetaRequest)
 		FileId: file.ID,
 	}, nil
 }
-func (mn *MateNode) CompleteAddFileMeta(ctx context.Context, req *pb.CompleteAddFileMetaRequest) (*pb.CompleteAddFileMetaResponse, error) {
-	fileId := req.FileId
-	mn.lockFile(fileId)
-	defer mn.unlockFile(fileId)
-	meta, err := mn.kv.GetFileMeta(fileId)
+
+func (mn *MateNode) GetFileMeta(ctx context.Context, req *pb.GetFileMetaRequest) (*pb.GetFileMetaResponse, error) {
+	meta, err := mn.kv.GetFileMeta(req.FileId)
 	if err != nil {
+		if errors.Is(err, common.ErrFileNotFound) {
+			return &pb.GetFileMetaResponse{
+				Code: pb.ErrorCode_FILE_NOT_FOUND,
+			}, nil
+		}
 		return nil, err
 	}
-	meta.FileName = req.FileName
-	meta.FileSize = req.FileSize
-	meta.State = common.FileState_EXISTED
-	meta.LastUpdateTimestamp = time.Now()
-	for _, chunkId := range req.ChunkId {
-		meta.ChunkIds[chunkId] = struct{}{}
-	}
-	err = mn.kv.PutFileMeta(meta)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.CompleteAddFileMetaResponse{}, nil
+	return &pb.GetFileMetaResponse{
+		Meta: common.FileMeta2Proto(meta),
+	}, nil
 }
+
 func (mn *MateNode) UpdateReceivingRate(ctx context.Context, req *pb.UpdateReceivingRateRequest) (*pb.UpdateReceivingRateResponse, error) {
 	//TODO: unimplemented logic
 	return &pb.UpdateReceivingRateResponse{}, nil

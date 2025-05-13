@@ -46,6 +46,7 @@ func NewMNServer(MNAddr string, dataPath string) (*MateNode, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return mn, nil
 }
 

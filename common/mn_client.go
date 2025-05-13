@@ -161,6 +161,26 @@ func (c *MNClient) AddChunkOnDN(sdkUuid string, dnUuid string) error {
 	return nil
 }
 
+func (c *MNClient) ReadChunkFromDN(sdkUuid string, dnUuid string, chunkId uint64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
+	defer cancel()
+
+	req := &pb.ReadChunkFromDNRequest{
+		SdkUuid: sdkUuid,
+		DnUuid:  dnUuid,
+		ChunkId: chunkId,
+	}
+	pbResp, err := c.client.ReadChunkFromDN(ctx, req)
+	if err != nil {
+		return fmt.Errorf("[Technical Error] read chunk from dn %v failed: %w", req.DnUuid, err)
+	}
+	err = Proto2Error(pbResp.Code)
+	if err != nil {
+		return fmt.Errorf("[Business Error] read chunk from dn failed: %w", err)
+	}
+	return nil
+}
+
 func (c *MNClient) CompleteAddChunkOnDN(chunkId uint64, uuid string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
@@ -180,38 +200,38 @@ func (c *MNClient) CompleteAddChunkOnDN(chunkId uint64, uuid string) error {
 	return nil
 }
 
-func (c *MNClient) AddFileMeta() (uint64, error) {
+func (c *MNClient) AddFileMeta(fileName string, fileSize int64, chunkId map[uint64]int64) (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	pbResp, err := c.client.AddFileMeta(ctx, &pb.AddFileMetaRequest{})
+	pbResp, err := c.client.AddFileMeta(ctx, &pb.AddFileMetaRequest{
+		FileSize: fileSize,
+		ChunkId:  chunkId,
+		FileName: fileName,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("add file meta failed: %w", err)
 	}
 	return pbResp.FileId, nil
 }
 
-func (c *MNClient) CompleteAddFileMeta(fileId uint64, fileName string, fileSize uint64, chunkId map[string]struct{}) error {
+func (c *MNClient) GetFileMeta(fileId uint64) (*FileMeta, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), mnClientTimeout)
 	defer cancel()
 
-	req := &pb.CompleteAddFileMetaRequest{
-		FileId:   fileId,
-		FileName: fileName,
-		FileSize: fileSize,
+	req := &pb.GetFileMetaRequest{
+		FileId: fileId,
 	}
-	if chunkId != nil {
-		req.ChunkId = make([]string, 0, len(chunkId))
-		for id := range chunkId {
-			req.ChunkId = append(req.ChunkId, id)
-		}
+	pbResp, err := c.client.GetFileMeta(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("get file meta failed: %w", err)
+	}
+	err = Proto2Error(pbResp.Code)
+	if err != nil {
+		return nil, fmt.Errorf("[Business Error] get file meta failed: [%w]", err)
 	}
 
-	_, err := c.client.CompleteAddFileMeta(ctx, req)
-	if err != nil {
-		return fmt.Errorf("complete add file meta failed: %w", err)
-	}
-	return nil
+	return Proto2FileMeta(pbResp.Meta), nil
 }
 
 func (c *MNClient) UpdateReceivingRate(rate float64) error {

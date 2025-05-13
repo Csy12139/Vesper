@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"github.com/Csy12139/Vesper/p2p"
 	"os"
@@ -100,13 +99,6 @@ func TestAddChunk(t *testing.T) {
 		}
 		data := make([]byte, 32*1024*1024)
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-			defer cancel()
-			err = trans.CreateSenderP2PConnection(dnId, ctx)
-			if err != nil {
-				t.Errorf("Failed to create P2P connection: %v", err)
-				return
-			}
 			err = trans.Send(dnId, strconv.FormatUint(chunkId, 10), data)
 			if err != nil {
 				t.Errorf("Failed to send data: %v", err)

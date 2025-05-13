@@ -14,9 +14,10 @@ service MNService {
   rpc GetChunkMeta(GetChunkMetaRequest) returns (GetChunkMetaResponse) {}
   rpc AllocateDnForChunk (AllocateDnForChunkRequest) returns (AllocateDnForChunkResponse) {}
   rpc AddChunkOnDN(AddChunkOnDNRequest) returns (AddChunkOnDNResponse) {}
+  rpc ReadChunkFromDN(ReadChunkFromDNRequest) returns (ReadChunkFromDNResponse) {}
   rpc CompleteAddChunkOnDN(CompleteAddChunkOnDNRequest) returns (CompleteAddChunkOnDNResponse) {}
   rpc AddFileMeta(AddFileMetaRequest) returns (AddFileMetaResponse) {}
-  rpc CompleteAddFileMeta(CompleteAddFileMetaRequest) returns (CompleteAddFileMetaResponse) {}
+  rpc GetFileMeta(GetFileMetaRequest) returns (GetFileMetaResponse) {}
   rpc UpdateReceivingRate(UpdateReceivingRateRequest) returns (UpdateReceivingRateResponse) {}
 }
 enum ErrorCode {
@@ -72,6 +73,14 @@ message AddChunkOnDNRequest{
 message AddChunkOnDNResponse{
   ErrorCode code = 1;
 }
+message ReadChunkFromDNRequest{
+  string sdk_uuid = 1;
+  string dn_uuid = 2;
+  uint64 chunkId = 3;
+}
+message ReadChunkFromDNResponse{
+  ErrorCode code = 1;
+}
 message AddChunkMetaRequest{
 
 }
@@ -81,22 +90,21 @@ message AddChunkMetaResponse{
 }
 
 message AddFileMetaRequest{
-
+  string file_name = 1;
+  int64 file_size = 2;
+  map<uint64, int64> chunk_id = 3;
 }
 
 message AddFileMetaResponse{
   uint64 fileId = 1;
 }
 
-message CompleteAddFileMetaRequest{
+message GetFileMetaRequest{
   uint64 fileId = 1;
-  string file_name = 2;
-  uint64 file_size = 3;
-  repeated string chunk_id = 4;
 }
-
-message CompleteAddFileMetaResponse{
-
+message GetFileMetaResponse{
+  FileMeta meta = 1;
+  ErrorCode code = 2;
 }
 
 message PutSDPCandidatesRequest{
@@ -189,9 +197,9 @@ enum FileState {
 message FileMeta{
   uint64 id = 1;
   string file_name = 2;
-  uint64 file_size = 3;
+  int64 file_size = 3;
   FileState state = 4;
-  repeated string chunk_id = 5;
+  map<uint64, int64> chunk_ids = 5;
   google.protobuf.Timestamp last_update_timestamp = 6;
 }
 
