@@ -34,12 +34,12 @@ func (dn *DataNode) HandleCommand(cmd *common.Command) {
 
 		switch cmd.Type {
 		case common.CommandType_READ_CHUNK:
+			log.Debugf("Handle read command,chunkId:[%v],targetUUid:[%v]", cmd.ReadChunkCmd.ChunkID, cmd.ReadChunkCmd.TargetUUID)
 			err := dn.handleReadChunk(cmd.ReadChunkCmd)
 			if err != nil {
 				result.Success = false
 				result.ErrorMessage = err.Error()
 			}
-
 		case common.CommandType_ADD_CHUNK:
 			err := dn.handleWriteChunk(cmd.AddChunkCmd)
 			if err != nil {
@@ -68,8 +68,9 @@ func (dn *DataNode) handleReadChunk(cmd *common.ReadChunkCmd) error {
 	if cmd == nil {
 		return fmt.Errorf("read chunk command is nil")
 	}
-	log.Infof("Processing read chunk command for target UUID: %s", cmd.TargetUUID)
+	log.Infof("Processing read chunk [%v] command for target UUID: %s", cmd.ChunkID, cmd.TargetUUID)
 	filePath := filepath.Join(dn.dataPath, strconv.FormatUint(cmd.ChunkID, 10))
+	log.Infof("dn [%v] read chunk [%v], where path is: [%s]", dn.UUID, cmd.ChunkID, filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("open file error [%v]", err)
@@ -125,6 +126,7 @@ func (dn *DataNode) handleWriteChunk(cmd *common.AddChunkCmd) error {
 				log.Errorf("Failed to complete add chunk meta: %v", err)
 				return
 			}
+			log.Debugf("Complete add chunk [%v] on dn [%v], store path[%v]", chunkId, dn.UUID, filePath)
 		}
 	})
 	if err != nil {

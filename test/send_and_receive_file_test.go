@@ -78,7 +78,7 @@ func TestSendAndReceiveFile(t *testing.T) {
 		t.Errorf("failed to create file: %v", err)
 	}
 	defer file.Close()
-	err = file.Truncate(1 * 1024 * 1024)
+	err = file.Truncate(100 * 1024 * 1024)
 	if err != nil {
 		t.Errorf("failed to set file size: %v", err)
 	}

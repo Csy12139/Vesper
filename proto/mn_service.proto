@@ -149,6 +149,7 @@ message SdpAndCandidates {
 
 message ReadChunkCmd {
   string target_uuid = 1;
+  uint64 chunk_id = 2;
 }
 
 message WriteChunkCmd {

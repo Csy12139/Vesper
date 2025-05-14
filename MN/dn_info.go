@@ -64,7 +64,7 @@ func (dn *DataNodeInfo) SubmitReadChunkCmd(targetUUID string, chunkID uint64, ti
 		Timeout:        timeout,
 		CallBack:       cb,
 	}
-	log.Infof("Submit read chunk cmd id [%v] to cmdQueue, cmd info[%+v]", cmd.ID, cmd)
+	log.Infof("Submit read chunk [%v] cmd id [%v] to cmdQueue, cmd.ReadChunkCmd.ChunkID:[%+v]", chunkID, cmd.ID, cmd.ReadChunkCmd.ChunkID)
 	dn.cmdQueue <- cmd
 	log.Debugf("commandQueue addr [%v] of [%v] queue size [%d]", dn.cmdQueue, dn.UUID, len(dn.cmdQueue))
 	return cmd.ID

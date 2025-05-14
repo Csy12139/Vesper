@@ -18,6 +18,7 @@ func Proto2Command(pbCmd *pb.Command) *Command {
 	case *pb.Command_ReadChunkCmd:
 		cmd.ReadChunkCmd = &ReadChunkCmd{
 			TargetUUID: c.ReadChunkCmd.TargetUuid,
+			ChunkID:    c.ReadChunkCmd.ChunkId,
 		}
 	case *pb.Command_WriteChunkCmd:
 		cmd.AddChunkCmd = &AddChunkCmd{
@@ -44,6 +45,7 @@ func Command2Proto(cmd *Command) *pb.Command {
 		pbCmd.Command = &pb.Command_ReadChunkCmd{
 			ReadChunkCmd: &pb.ReadChunkCmd{
 				TargetUuid: cmd.ReadChunkCmd.TargetUUID,
+				ChunkId:    cmd.ReadChunkCmd.ChunkID,
 			},
 		}
 	case cmd.AddChunkCmd != nil:

@@ -36,6 +36,7 @@ func (sdk *Sdk) StoreFile(FileName string, ReplicaNumber int, IsEncrypted bool, 
 			log.Fatalf("Failed to add chunk meta: %v", err)
 		}
 		ChunkIds[chunkId] = index
+		index++
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(chunkId uint64, chunkOffset int64) {
@@ -145,6 +146,7 @@ func (sdk *Sdk) ReadFile(FileName string, concurrencyNumber int) error {
 			}
 			readChunkOk := false
 			for dnId := range chunkMeta.DnUuids {
+				log.Debugf("Ready to read chunk [%v] from dn [%v]", chunkId, dnId)
 				err = sdk.mnClient.ReadChunkFromDN(sdk.UUID, dnId, chunkId)
 				if err != nil {
 					log.Fatalf("Failed to add chunk on dn: %v", err)
@@ -169,6 +171,7 @@ func (sdk *Sdk) ReadFile(FileName string, concurrencyNumber int) error {
 				}
 				if <-ch {
 					readChunkOk = true
+					log.Debugf("read chunk [%v] from dn [%v] ok", chunkId, dnId)
 					break
 				}
 			}

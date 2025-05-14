@@ -99,6 +99,7 @@ func (mn *MateNode) DoHeartbeat(ctx context.Context, req *pb.HeartbeatRequest) (
 			log.Infof("heartbeat append cmd [%d] to dn [%v], push it to waitResponseCommand", cmd.ID, request.UUID)
 			response.Commands = append(response.Commands, cmd)
 			dn.waitResponseCommand[cmd.ID] = cmd
+
 		default:
 			return common.HeartbeatResponse2Proto(response), nil
 		}
@@ -209,7 +210,7 @@ func (mn *MateNode) AddChunkOnDN(ctx context.Context, req *pb.AddChunkOnDNReques
 }
 
 func (mn *MateNode) ReadChunkFromDN(ctx context.Context, req *pb.ReadChunkFromDNRequest) (*pb.ReadChunkFromDNResponse, error) {
-	log.Debug("start read chunk from dn")
+	log.Debugf("start read chunk [%v] from dn [%v]", req.ChunkId, req.DnUuid)
 	mn.dataNodeLock.RLock()
 	dn, exist := mn.dataNodes[req.DnUuid]
 	mn.dataNodeLock.RUnlock()
@@ -252,6 +253,7 @@ func (mn *MateNode) CompleteAddChunkOnDN(ctx context.Context, req *pb.CompleteAd
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("add chunk [%d] on dn [%v] success", chunkID, dnUUID)
 	return &pb.CompleteAddChunkOnDNResponse{}, nil
 }
 func (mn *MateNode) AddFileMeta(ctx context.Context, req *pb.AddFileMetaRequest) (*pb.AddFileMetaResponse, error) {
