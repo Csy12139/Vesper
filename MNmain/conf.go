@@ -1,4 +1,4 @@
-package MNmain
+package main
 
 import (
 	"encoding/json"
@@ -13,12 +13,12 @@ type LogConfig struct {
 	MaxFileNum    int    `json:"maxFileNum"`
 	LogLevel      string `json:"logLevel"`
 }
-	
+
 type Config struct {
-	MNAddr        string    `json:"mn_addr"`
-	MNNetwork     string    `json:"mn_network"`
-	MNDataPath    string    `json:"mn_data_path"`
-	Log           LogConfig `json:"log"`
+	MNAddr     string    `json:"mn_addr"`
+	MNNetwork  string    `json:"mn_network"`
+	MNDataPath string    `json:"mn_data_path"`
+	Log        LogConfig `json:"log"`
 }
 
 var GlobalConfig Config

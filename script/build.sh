@@ -14,14 +14,14 @@ protoc --go_out=. --go_opt=paths=source_relative \
 
 # Build DN binary
 echo "Building DN..."
-go build -o build/dn ./DN
+go build -o build/dn ./DNmain
 
 # Build MN binary 
 echo "Building MN..."
-go build -o build/mn ./MN
+go build -o build/mn ./MNmain
 
 # Build SDK binary
 echo "Building SDK..."
-go build -o build/sdk ./SDK
+go build -o build/sdk ./SDKmain
 
 echo "Build complete! Binaries are in the build directory"

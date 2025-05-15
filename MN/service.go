@@ -163,6 +163,7 @@ func (mn *MateNode) CompleteAddChunkMeta(ctx context.Context, req *pb.CompleteAd
 func (mn *MateNode) AllocateDnForChunk(ctx context.Context, req *pb.AllocateDnForChunkRequest) (*pb.AllocateDnForChunkResponse, error) {
 	excludes := req.Excludes
 	dnUUID, err := mn.allocateDn(excludes)
+	log.Debugf("mn allocate dn uuid [%s]", dnUUID)
 	if err != nil {
 		if errors.Is(err, common.ErrNoAvailableDN) {
 			return &pb.AllocateDnForChunkResponse{

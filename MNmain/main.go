@@ -1,4 +1,4 @@
-package MNmain
+package main
 
 import (
 	"fmt"

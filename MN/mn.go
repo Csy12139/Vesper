@@ -154,6 +154,7 @@ func (mn *MateNode) unlockFile(FileId uint64) {
 func (mn *MateNode) allocateDn(excludes []string) (string, error) {
 	mn.dataNodeLock.RLock()
 	availableDNs := make([]string, 0, len(mn.dataNodes))
+	log.Debugf("mn.dataNodes size: %v", len(mn.dataNodes))
 	// TODO:consider capacity and receiving rate
 	for uuid, dn := range mn.dataNodes {
 		// Skip excluded and dead DNs
