@@ -87,7 +87,7 @@ func TestSendAndReceiveFile(t *testing.T) {
 		t.Errorf("failed to calculate MD5: %v", err)
 	}
 	// store
-	err = sdk.StoreFile("testFile", 1, false, 1)
+	err = sdk.StoreFile("testFile", 1, false, 2)
 	if err != nil {
 		t.Errorf("failed to store file: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestSendAndReceiveFile(t *testing.T) {
 		t.Errorf("failed to remove file: %v", err)
 	}
 	// read
-	err = sdk.ReadFile("testFile", 1)
+	err = sdk.ReadFile("testFile", 2)
 	if err != nil {
 		t.Errorf("failed to read file: %v", err)
 	}

@@ -1,32 +1,45 @@
 #!/bin/bash
 
 VESPER_BASE_DIR="$HOME/Desktop/vesper_sdk_test"
-# rm old directory
+
+# Delete old directory
+echo "Delete old directory..."
 if [ -d "$VESPER_BASE_DIR" ]; then
     rm -rf "$VESPER_BASE_DIR"
     if [ ! -d "$VESPER_BASE_DIR" ]; then
-        echo "delete success"
+        echo "Delete old directory successfully."
     else
-        echo "delete failed" >&2
+        echo "Failed to delete old directory." >&2
         exit 1
     fi
 else
-    echo "directory is not existed"
+    echo "Directory does not exist."
 fi
 
-# Create base directory for MetaNode ,SDK and DataNodes
-mkdir -p "$VESPER_BASE_DIR"
-# enter the base directory
-cd "$VESPER_BASE_DIR" || {
-    echo "error: can not enter the directory '$VESPER_BASE_DIR'"
+# Create the base directory for MetaNode, SDK, and DataNodes, then enter it
+echo "Create base directory..."
+mkdir -p "$VESPER_BASE_DIR" || {
+    echo "error: failed to create base directory: '$VESPER_BASE_DIR'"
     exit 1
 }
-# cp exe to base directory
-cp -r /home/cissy/GolandProjects/Vesper/build/ "$VESPER_BASE_DIR"
+cd "$VESPER_BASE_DIR" || {
+    echo "error: can not enter the directory: '$VESPER_BASE_DIR'"
+    exit 1
+}
+# Copy exe to the base directory
+echo "Copy exe to the base directory..."
+cp -r /home/cissy/GolandProjects/Vesper/build/ "$VESPER_BASE_DIR" || {
+    echo "error: copy exe to the base directory failed."
+    exit 1
+}
 # Run MetaNode
+echo "Run MetaNode..."
   # Create directory
 MN_DIR="$VESPER_BASE_DIR/mn"
-mkdir -p "$MN_DIR"
+mkdir -p "$MN_DIR" || {
+    echo "error: create mn directory failed."
+    exit 1
+}
   # Create mn config file
 MN_CONFIG_PATH="$VESPER_BASE_DIR/mn_conf_template.json"
 cat << EOF > "$MN_CONFIG_PATH"
@@ -50,123 +63,49 @@ MN_PID=$!
 echo "mn PID: $MN_PID"
 echo "$MN_PID" > "$VESPER_BASE_DIR/mn/mn.pid"
 
-# Run DataNodes
-  # Create directorie for 5 DataNodes
-DN0_DIR="$VESPER_BASE_DIR/dn0"
-mkdir -p "$DN0_DIR"
-DN1_DIR="$VESPER_BASE_DIR/dn1"
-mkdir -p "$DN1_DIR"
-DN2_DIR="$VESPER_BASE_DIR/dn2"
-mkdir -p "$DN2_DIR"
-DN3_DIR="$VESPER_BASE_DIR/dn3"
-mkdir -p "$DN3_DIR"
-DN4_DIR="$VESPER_BASE_DIR/dn4"
-mkdir -p "$DN4_DIR"
-  # Create config json for 5 DataNodes
-DN0_CONFIG_PATH="$VESPER_BASE_DIR/dn0_conf_template.json"
-cat << EOF > "$DN0_CONFIG_PATH"
-{
-  "uuid": "wtpsk1m0",
-  "log": {
-    "logDir": "./dn0",
-    "maxFileSizeMb": 100,
-    "maxFileNum": 10,
-    "logLevel": "DEBUG"
-  },
-  "data_path": "./dn0",
-  "mn_addr": "127.0.0.1:50051"
-}
-EOF
-DN1_CONFIG_PATH="$VESPER_BASE_DIR/dn1_conf_template.json"
-cat << EOF > "$DN1_CONFIG_PATH"
-{
-  "uuid": "wtpsk1m1",
-  "log": {
-    "logDir": "./dn1",
-    "maxFileSizeMb": 100,
-    "maxFileNum": 10,
-    "logLevel": "DEBUG"
-  },
-  "data_path": "./dn1",
-  "mn_addr": "127.0.0.1:50051"
-}
-EOF
-DN2_CONFIG_PATH="$VESPER_BASE_DIR/dn2_conf_template.json"
-cat << EOF > "$DN2_CONFIG_PATH"
-{
-  "uuid": "wtpsk1m2",
-  "log": {
-    "logDir": "./dn2",
-    "maxFileSizeMb": 100,
-    "maxFileNum": 10,
-    "logLevel": "DEBUG"
-  },
-  "data_path": "./dn2",
-  "mn_addr": "127.0.0.1:50051"
-}
-EOF
-DN3_CONFIG_PATH="$VESPER_BASE_DIR/dn3_conf_template.json"
-cat << EOF > "$DN3_CONFIG_PATH"
-{
-  "uuid": "wtpsk1m3",
-  "log": {
-    "logDir": "./dn3",
-    "maxFileSizeMb": 100,
-    "maxFileNum": 10,
-    "logLevel": "DEBUG"
-  },
-  "data_path": "./dn3",
-  "mn_addr": "127.0.0.1:50051"
-}
-EOF
-DN4_CONFIG_PATH="$VESPER_BASE_DIR/dn4_conf_template.json"
-cat << EOF > "$DN4_CONFIG_PATH"
-{
-  "uuid": "wtpsk1m4",
-  "log": {
-    "logDir": "./dn4",
-    "maxFileSizeMb": 100,
-    "maxFileNum": 10,
-    "logLevel": "DEBUG"
-  },
-  "data_path": "./dn4",
-  "mn_addr": "127.0.0.1:50051"
-}
-EOF
-  # run 5 DataNodes
+# Run 5 DataNodes
+echo "Run DataNodes..."
+NUM_DN=5
 DN_EXE="$VESPER_BASE_DIR/build/dn"
 chmod +x "$DN_EXE"
-nohup "$DN_EXE" "$DN0_CONFIG_PATH" > "$VESPER_BASE_DIR/dn0/dn0.out" 2>&1 &
-DN0_PID=$!
-echo "dn0 PID: $DN0_PID"
-echo "$DN0_PID" > "$VESPER_BASE_DIR/dn0/dn0.pid"
-
-nohup "$DN_EXE" "$DN1_CONFIG_PATH" > "$VESPER_BASE_DIR/dn1/dn1.out" 2>&1 &
-DN1_PID=$!
-echo "dn1 PID: $DN1_PID"
-echo "$DN1_PID" > "$VESPER_BASE_DIR/dn1/dn1.pid"
-
-nohup "$DN_EXE" "$DN2_CONFIG_PATH" > "$VESPER_BASE_DIR/dn2/dn2.out" 2>&1 &
-DN2_PID=$!
-echo "dn2 PID: $DN2_PID"
-echo "$DN2_PID" > "$VESPER_BASE_DIR/dn2/dn2.pid"
-
-nohup "$DN_EXE" "$DN3_CONFIG_PATH" > "$VESPER_BASE_DIR/dn3/dn3.out" 2>&1 &
-DN3_PID=$!
-echo "dn3 PID: $DN3_PID"
-echo "$DN3_PID" > "$VESPER_BASE_DIR/dn3/dn3.pid"
-
-nohup "$DN_EXE" "$DN4_CONFIG_PATH" > "$VESPER_BASE_DIR/dn4/dn4.out" 2>&1 &
-DN4_PID=$!
-echo "dn4 PID: $DN4_PID"
-echo "$DN4_PID" > "$VESPER_BASE_DIR/dn4/dn4.pid"
-
+for ((i=0; i<NUM_DN; i++)); do
+    # Create directorie for DataNodes
+    DN_DIR="$VESPER_BASE_DIR/dn${i}"
+    mkdir -p "$DN_DIR" || {
+        echo "error: create dn${i} directory failed."
+        exit 1
+    }
+    # Create config json for DataNodes
+    DN_CONFIG_PATH="$VESPER_BASE_DIR/dn${i}_conf_template.json"
+cat << EOF > "$DN_CONFIG_PATH"
+  {
+    "uuid": "wtpsk1m${i}",
+    "log": {
+      "logDir": "./dn${i}",
+      "maxFileSizeMb": 100,
+      "maxFileNum": 10,
+      "logLevel": "DEBUG"
+    },
+    "data_path": "./dn${i}",
+    "mn_addr": "127.0.0.1:50051"
+  }
+EOF
+    # run DataNodes
+    nohup "$DN_EXE" "$DN_CONFIG_PATH" > "$VESPER_BASE_DIR/dn${i}/dn${i}.out" 2>&1 &
+    DN_PID=$!
+    echo "dn${i} PID: $DN_PID"
+    echo "$DN_PID" > "$VESPER_BASE_DIR/dn${i}/dn${i}.pid"
+done
 sleep 5
 
 # Run SDK
+echo "Run SDK..."
   # Create directorie
 SDK_DIR="$VESPER_BASE_DIR/sdk"
-mkdir -p "$SDK_DIR"
+mkdir -p "$SDK_DIR" || {
+    echo "error: create sdk directory failed."
+    exit 1
+}
   # Create sdk config file
 SDK_CONFIG_PATH="$VESPER_BASE_DIR/mn_conf_template.json"
 cat << EOF > "$SDK_CONFIG_PATH"
@@ -190,47 +129,28 @@ chmod +x "$SDK_EXE"
     exit 1
 }
 
-# stop old process
+# Stop old process
+  # stop mn
 if [ -f "$VESPER_BASE_DIR/mn/mn.pid" ]; then
     OLD_PID=$(cat "$VESPER_BASE_DIR/mn/mn.pid")
     if ps -p "$OLD_PID" > /dev/null; then
-        kill "$OLD_PID" && echo "The old mn process has been stopped. (PID: $OLD_PID)"
+        kill "$OLD_PID" && echo "The mn process has been stopped. (PID: $OLD_PID)"
     fi
 fi
-if [ -f "$VESPER_BASE_DIR/dn0/dn0.pid" ]; then
-    OLD_PID=$(cat "$VESPER_BASE_DIR/dn0/dn0.pid")
-    if ps -p "$OLD_PID" > /dev/null; then
-        kill "$OLD_PID" && echo "The old dn0 process has been stopped. (PID: $OLD_PID)"
-    fi
-fi
-if [ -f "$VESPER_BASE_DIR/dn1/dn1.pid" ]; then
-    OLD_PID=$(cat "$VESPER_BASE_DIR/dn1/dn1.pid")
-    if ps -p "$OLD_PID" > /dev/null; then
-        kill "$OLD_PID" && echo "The old dn1 process has been stopped. (PID: $OLD_PID)"
-    fi
-fi
-if [ -f "$VESPER_BASE_DIR/dn2/dn2.pid" ]; then
-    OLD_PID=$(cat "$VESPER_BASE_DIR/dn2/dn2.pid")
-    if ps -p "$OLD_PID" > /dev/null; then
-        kill "$OLD_PID" && echo "The old dn2 process has been stopped. (PID: $OLD_PID)"
-    fi
-fi
-if [ -f "$VESPER_BASE_DIR/dn3/dn3.pid" ]; then
-    OLD_PID=$(cat "$VESPER_BASE_DIR/dn3/dn3.pid")
-    if ps -p "$OLD_PID" > /dev/null; then
-        kill "$OLD_PID" && echo "The old dn3 process has been stopped. (PID: $OLD_PID)"
-    fi
-fi
-if [ -f "$VESPER_BASE_DIR/dn4/dn4.pid" ]; then
-    OLD_PID=$(cat "$VESPER_BASE_DIR/dn4/dn4.pid")
-    if ps -p "$OLD_PID" > /dev/null; then
-        kill "$OLD_PID" && echo "The old dn4 process has been stopped. (PID: $OLD_PID)"
-    fi
-fi
+  # stop dn
+for ((i=0; i<NUM_DN; i++)); do
+  if [ -f "$VESPER_BASE_DIR/dn${i}/dn${i}.pid" ]; then
+      OLD_PID=$(cat "$VESPER_BASE_DIR/dn${i}/dn${i}.pid")
+      if ps -p "$OLD_PID" > /dev/null; then
+          kill "$OLD_PID" && echo "The dn${i} process has been stopped. (PID: $OLD_PID)"
+      fi
+  fi
+done
+  # stop sdk
 if [ -f "$VESPER_BASE_DIR/sdk/sdk.pid" ]; then
     OLD_PID=$(cat "$VESPER_BASE_DIR/sdk/sdk.pid")
     if ps -p "$OLD_PID" > /dev/null; then
-        kill "$OLD_PID" && echo "The old sdk process has been stopped. (PID: $OLD_PID)"
+        kill "$OLD_PID" && echo "The sdk process has been stopped. (PID: $OLD_PID)"
     fi
 fi
 
